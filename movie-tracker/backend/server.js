@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -8,6 +8,7 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const { initGenreCache } = require("./lib/genreCache");
+const path = require("path");
 
 const app = express();
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -72,6 +73,12 @@ app.use("/api/auth", require("./routes/auth"));
 app.use("/api/movies", require("./routes/movies"));
 app.use("/api/tmdb", require("./routes/tmdb"));
 app.use("/api/import", require("./routes/import"));
+
+const frontendDist = path.join(__dirname, "../frontend/dist");
+app.use(express.static(frontendDist));
+app.get("*", (req, res) => {
+  res.sendFile(path.join(frontendDist, "index.html"));
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port " + PORT));
