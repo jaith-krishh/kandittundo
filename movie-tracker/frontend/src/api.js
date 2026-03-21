@@ -2,9 +2,9 @@ import axios from 'axios';
 
 // All TMDB calls go through our backend — never directly to TMDB from frontend
 const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   timeout: 10000,
-  withCredentials: true // send session cookie
+  withCredentials: true
 });
 
 // Auth
