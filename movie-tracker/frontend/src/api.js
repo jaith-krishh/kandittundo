@@ -22,3 +22,4 @@ export const deleteMovie = (id) => API.delete(`/movies/${id}`).then(r => r.data)
 export const bulkRank = (rankings) => API.put('/movies/rank/bulk', { rankings }).then(r => r.data);
 export const getStats = () => API.get('/movies/stats/summary').then(r => r.data);
 export const lookupImport = (titles) => API.post('/import/lookup', { titles }).then(r => r.data);
+export const getRandomMovie = (params) => API.get('/random', { params }).then(r => r.data);

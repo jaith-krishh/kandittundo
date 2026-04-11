@@ -8,6 +8,7 @@ const NAV = [
   { id: 'ranking', label: 'Ranking' },
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'timeline', label: 'Timeline' },
+  { id: 'random', label: 'Random' },
   { id: 'import', label: 'Import' }
 ];
 
