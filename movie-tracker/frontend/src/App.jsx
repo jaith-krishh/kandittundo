@@ -9,6 +9,7 @@ import RankingPage from './pages/RankingPage';
 import DashboardPage from './pages/DashboardPage';
 import TimelinePage from './pages/TimelinePage';
 import ImportPage from './pages/ImportPage';
+import RandomPage from './pages/RandomPage';
 import LoginPage from './pages/LoginPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import LoadingScreen from './components/LoadingScreen';
@@ -44,7 +45,8 @@ function AppInner() {
     ranking: <RankingPage />,
     dashboard: <DashboardPage />,
     timeline: <TimelinePage />,
-    import: <ImportPage />
+    import: <ImportPage />,
+    random: <RandomPage />
   };
 
   return (
@@ -52,7 +54,7 @@ function AppInner() {
       <VantaBackground />
       <Navbar page={page} setPage={setPage} />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
-        {page === 'watchlist' && <SearchBar />}
+      {page === 'watchlist' && <SearchBar />}
         {pages[page]}
       </main>
     </MovieProvider>
