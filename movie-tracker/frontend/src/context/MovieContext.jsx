@@ -32,12 +32,13 @@ export function MovieProvider({ children }) {
     return movie;
   };
 
-  const markWatched = async (id, { rating, remarks, rewatch_value, season_ratings, total_seasons }) => {
+  const markWatched = async (id, { rating, remarks, rewatch_value, season_ratings, total_seasons, watch_status }) => {
     const movie = await updateMovie(id, {
       status: 'watched', rating, remarks, rewatch_value,
       date_watched: new Date().toISOString(),
       ...(season_ratings !== undefined && { season_ratings }),
-      ...(total_seasons !== undefined && { total_seasons })
+      ...(total_seasons !== undefined && { total_seasons }),
+      ...(watch_status !== undefined && { watch_status })
     });
     setMovies(prev => prev.map(m => m._id === id ? movie : m));
     setAllMovies(prev => prev.map(m => m._id === id ? movie : m));
