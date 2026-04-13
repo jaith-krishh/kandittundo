@@ -12,8 +12,9 @@ export const setupProfile = (data) => API.post('/auth/setup', data).then(r => r.
 export const updateProfile = (data) => API.post('/auth/profile', data).then(r => r.data);
 export const checkUsername = (username) => API.get(`/auth/check-username/${username}`).then(r => r.data);
 
-export const searchTMDB = (q) => API.get(`/tmdb/search?q=${encodeURIComponent(q)}`).then(r => r.data);
+export const searchTMDB = (q, lang = '') => API.get(`/tmdb/search?q=${encodeURIComponent(q)}${lang ? `&lang=${lang}` : ''}`).then(r => r.data);
 export const getTrailer = (id, type = 'movie') => API.get(`/tmdb/trailer/${type}/${id}`).then(r => r.data);
+export const getTVDetails = (id) => API.get(`/tmdb/details/tv/${id}`).then(r => r.data);
 
 export const getMovies = (params) => API.get('/movies', { params }).then(r => r.data);
 export const addMovie = (data) => API.post('/movies', data).then(r => r.data);
