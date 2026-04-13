@@ -36,6 +36,7 @@ export default function MovieModal({ movie, onClose }) {
     return [];
   });
 
+  // isMultiSeason is true once totalSeasons is known and > 1
   const isMultiSeason = isTV && (totalSeasons > 1 || (movie.total_seasons || 0) > 1);
 
   useEffect(() => {
@@ -50,11 +51,16 @@ export default function MovieModal({ movie, onClose }) {
           if (r.data.total_seasons && isTV) {
             const ts = r.data.total_seasons;
             setTotalSeasons(ts);
-            if (!movie.season_ratings?.length) {
-              setSeasonRows(Array.from({ length: ts }, (_, i) => ({
-                season: i + 1, watched: false, rating: '', remarks: ''
-              })));
-            }
+            // Always rebuild rows from TMDB total, merging saved season_ratings
+            setSeasonRows(Array.from({ length: ts }, (_, i) => {
+              const existing = movie.season_ratings?.find(s => s.season === i + 1);
+              return {
+                season: i + 1,
+                watched: !!existing,
+                rating: existing?.rating ?? '',
+                remarks: existing?.remarks ?? ''
+              };
+            }));
           }
         }).catch(() => {});
     }
@@ -82,7 +88,7 @@ export default function MovieModal({ movie, onClose }) {
       remarks,
       rewatch_value: rewatch || null,
       season_ratings: cleaned,
-      total_seasons: totalSeasons,
+      total_seasons: totalSeasons || seasonRows.length,
       watch_status
     };
 
@@ -105,7 +111,7 @@ export default function MovieModal({ movie, onClose }) {
       .map(s => ({ season: s.season, rating: Number(s.rating), remarks: s.remarks || '' }));
     await editMovie(movie._id, {
       season_ratings: cleaned,
-      total_seasons: totalSeasons,
+      total_seasons: totalSeasons || seasonRows.length,
       watch_status: 'ongoing'
     });
     onClose();
@@ -150,7 +156,7 @@ export default function MovieModal({ movie, onClose }) {
     }
     await editMovie(movie._id, {
       rating: overallRating, remarks, rewatch_value: rewatch || null,
-      season_ratings: cleaned, total_seasons: totalSeasons,
+      season_ratings: cleaned, total_seasons: totalSeasons || seasonRows.length,
       watch_status: movie.watch_status
     });
     onClose();
