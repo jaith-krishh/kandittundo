@@ -4,8 +4,8 @@ const cors = require("cors");
 const mongoose = require("mongoose");
 const session = require("express-session");
 const MongoStore = require("connect-mongo").MongoStore;
-// const passport = require("passport");
-// const GoogleStrategy = require("passport-google-oauth20").Strategy;
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const { initGenreCache } = require("./lib/genreCache");
 const path = require("path");
@@ -25,12 +25,11 @@ app.use(session({
   cookie: {
     maxAge: 1000 * 60 * 60 * 24 * 30,
     httpOnly: true,
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     sameSite: "lax"
   }
 }));
 
-/*
 passport.use(new GoogleStrategy({
   clientID: process.env.GOOGLE_CLIENT_ID,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -63,33 +62,13 @@ passport.deserializeUser(async (id, done) => {
 
 app.use(passport.initialize());
 app.use(passport.session());
-*/
 
-// --- DEV BYPASS: auto-attach a test user to every request ---
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("MongoDB connected");
     await initGenreCache();
   })
   .catch(err => console.error("MongoDB error:", err));
-
-app.use(async (req, res, next) => {
-  if (!req.session.devUserId) {
-    let user = await User.findOne({ username: 'devuser' });
-    if (!user) {
-      user = await User.create({
-        googleId: 'dev-bypass-001',
-        email: 'dev@local.test',
-        username: 'devuser',
-        displayName: 'Dev User',
-        profileComplete: true
-      });
-    }
-    req.session.devUserId = user._id.toString();
-  }
-  req.user = await User.findById(req.session.devUserId);
-  next();
-});
 
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/movies", require("./routes/movies"));
