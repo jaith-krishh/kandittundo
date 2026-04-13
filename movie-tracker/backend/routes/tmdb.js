@@ -22,7 +22,8 @@ router.get('/details/:type/:id', async (req, res) => {
     });
     const result = {
       overview: data.overview || '',
-      tmdb_rating: data.vote_average ? Math.round(data.vote_average * 10) / 10 : null
+      tmdb_rating: data.vote_average ? Math.round(data.vote_average * 10) / 10 : null,
+      total_seasons: data.number_of_seasons || null
     };
     cache[key] = result;
     res.json(result);
@@ -31,22 +32,27 @@ router.get('/details/:type/:id', async (req, res) => {
   }
 });
 
-// GET /api/tmdb/search?q=query
+// GET /api/tmdb/search?q=query&lang=ko
 router.get('/search', async (req, res) => {
   const q = (req.query.q || '').trim();
+  const lang = (req.query.lang || '').trim();
   if (q.length < 3) return res.json([]);
 
-  if (cache[q]) return res.json(cache[q]);
+  const cacheKey = lang ? `${q}::${lang}` : q;
+  if (cache[cacheKey]) return res.json(cache[cacheKey]);
 
   try {
-    // Use multi-search to get both movies and TV shows
+    const params = { api_key: API_KEY, query: q, page: 1 };
+    if (lang) params.with_original_language = lang;
+
     const { data } = await axios.get(`${TMDB_BASE}/search/multi`, {
-      params: { api_key: API_KEY, query: q, page: 1 },
-      timeout: 8000
+      params, timeout: 8000
     });
 
-    const results = data.results
+    let results = data.results
       .filter(m => m.media_type === 'movie' || m.media_type === 'tv')
+      // If language filter set, enforce it (TMDB multi-search doesn't always respect with_original_language)
+      .filter(m => !lang || m.original_language === lang)
       .slice(0, 10)
       .map(m => {
         const isTV = m.media_type === 'tv';
@@ -66,7 +72,7 @@ router.get('/search', async (req, res) => {
         };
       });
 
-    cache[q] = results;
+    cache[cacheKey] = results;
     res.json(results);
   } catch (err) {
     console.error('Search error:', err.message);

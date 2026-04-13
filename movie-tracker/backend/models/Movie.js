@@ -19,7 +19,14 @@ const MovieSchema = new mongoose.Schema({
   trailer_key: { type: String, default: null },
   overview: { type: String, default: '' },
   tmdb_rating: { type: Number, default: null },
-  cached_at: { type: Date, default: Date.now }
+  cached_at: { type: Date, default: Date.now },
+  // TV show season ratings
+  season_ratings: [{
+    season: { type: Number, required: true },
+    rating: { type: Number, min: 0, max: 10, default: null },
+    remarks: { type: String, default: '' }
+  }],
+  total_seasons: { type: Number, default: null }
 });
 
 MovieSchema.index({ userId: 1, status: 1 });
