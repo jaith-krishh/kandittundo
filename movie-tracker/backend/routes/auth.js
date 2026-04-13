@@ -1,23 +1,23 @@
 const express = require('express');
-// const passport = require('passport');
+const passport = require('passport');
 const User = require('../models/User');
 const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // GET /api/auth/google — kick off OAuth
-// router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
 
 // GET /api/auth/google/callback
-// router.get('/google/callback',
-//   passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/` }),
-//   (req, res) => {
-//     if (!req.user.profileComplete) {
-//       return res.redirect(`${FRONTEND_URL}/?setup=1`);
-//     }
-//     res.redirect(FRONTEND_URL);
-//   }
-// );
+router.get('/google/callback',
+  passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/` }),
+  (req, res) => {
+    if (!req.user.profileComplete) {
+      return res.redirect(`${FRONTEND_URL}/?setup=1`);
+    }
+    res.redirect(FRONTEND_URL);
+  }
+);
 
 // GET /api/auth/me — returns current user (or 401)
 router.get('/me', (req, res) => {
@@ -74,8 +74,7 @@ router.post('/profile', async (req, res) => {
 
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
-  // req.logout(() => res.json({ message: 'Logged out' })); // Google auth logout
-  req.session.destroy(() => res.json({ message: 'Logged out' }));
+  req.logout(() => res.json({ message: 'Logged out' }));
 });
 
 // Check username availability
