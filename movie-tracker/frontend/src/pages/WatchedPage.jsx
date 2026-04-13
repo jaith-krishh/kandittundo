@@ -18,6 +18,7 @@ export default function WatchedPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   const [searchQ, setSearchQ] = useState('');
+  const [mediaType, setMediaType] = useState('all');
 
   useEffect(() => {
     fetchMovies({ status: 'watched', sortBy, sortOrder,
@@ -27,9 +28,9 @@ export default function WatchedPage() {
     });
   }, [sortBy, sortOrder, genres, minRating, maxRating, rewatch]);
 
-  const watched = movies.filter(m => m.status === 'watched').filter(m =>
-    !searchQ || m.title.toLowerCase().includes(searchQ.toLowerCase())
-  );
+  const watched = movies.filter(m => m.status === 'watched')
+    .filter(m => !searchQ || m.title.toLowerCase().includes(searchQ.toLowerCase()))
+    .filter(m => mediaType === 'all' || m.media_type === mediaType);
 
   const toggleGenre = (g) => setGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
@@ -39,6 +40,20 @@ export default function WatchedPage() {
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>
           Watched <span style={{ color: 'var(--text2)', fontSize: 16 }}>({watched.length})</span>
         </h1>
+        {/* Media type toggle */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['all', 'All'], ['movie', 'Films'], ['tv', 'TV']].map(([val, label]) => (
+            <button key={val} onClick={() => setMediaType(val)}
+              className="btn btn-ghost btn-sm"
+              style={{
+                background: mediaType === val ? 'var(--accent)' : 'transparent',
+                color: mediaType === val ? '#fff' : 'var(--text2)',
+                borderColor: mediaType === val ? 'var(--accent)' : 'var(--border)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           {/* Search */}
           <div style={{ position: 'relative' }}>

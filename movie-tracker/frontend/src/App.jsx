@@ -11,6 +11,7 @@ import TimelinePage from './pages/TimelinePage';
 import ImportPage from './pages/ImportPage';
 import RandomPage from './pages/RandomPage';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import LoadingScreen from './components/LoadingScreen';
 import VantaBackground from './components/VantaBackground';
@@ -35,7 +36,7 @@ function AppInner() {
 
   if (!appReady || authLoading) return <LoadingScreen />;
 
-  if (!user) return <LoginPage />;
+  if (!user) return <LandingPage />;
 
   if (!user.profileComplete) return <ProfileSetupPage />;
 

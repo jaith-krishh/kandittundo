@@ -26,7 +26,8 @@ const MovieSchema = new mongoose.Schema({
     rating: { type: Number, min: 0, max: 10, default: null },
     remarks: { type: String, default: '' }
   }],
-  total_seasons: { type: Number, default: null }
+  total_seasons: { type: Number, default: null },
+  watch_status: { type: String, enum: ['ongoing', 'completed', 'dropped', null], default: null }
 });
 
 MovieSchema.index({ userId: 1, status: 1 });
