@@ -6,22 +6,48 @@ import MovieModal from '../components/MovieModal';
 export default function WatchlistPage() {
   const { movies, fetchMovies, loading, removeMovie } = useMovies();
   const [selected, setSelected] = useState(null);
+  const [filter, setFilter] = useState('all'); // 'all' | 'ongoing'
 
   useEffect(() => { fetchMovies({ status: 'watchlist' }); }, []);
 
-  const watchlist = movies.filter(m => m.status === 'watchlist');
+  const allWatchlist = movies.filter(m => m.status === 'watchlist');
+  const ongoingCount = allWatchlist.filter(m => m.watch_status === 'ongoing').length;
+  const watchlist = filter === 'ongoing'
+    ? allWatchlist.filter(m => m.watch_status === 'ongoing')
+    : allWatchlist;
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 700, marginBottom: 20 }}>
-        Watchlist <span style={{ color: 'var(--text2)', fontSize: 16 }}>({watchlist.length})</span>
-      </h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700 }}>
+          Watchlist <span style={{ color: 'var(--text2)', fontSize: 16 }}>({watchlist.length})</span>
+        </h1>
+        {ongoingCount > 0 && (
+          <button
+            onClick={() => setFilter(f => f === 'ongoing' ? 'all' : 'ongoing')}
+            className="btn btn-ghost btn-sm"
+            style={{
+              borderColor: filter === 'ongoing' ? '#4fc3f7' : 'var(--border)',
+              color: filter === 'ongoing' ? '#4fc3f7' : 'var(--text2)',
+              background: filter === 'ongoing' ? 'rgba(79,195,247,0.08)' : 'transparent',
+              display: 'flex', alignItems: 'center', gap: 6
+            }}
+          >
+            <span style={{
+              width: 7, height: 7, borderRadius: '50%', background: '#4fc3f7',
+              display: 'inline-block', flexShrink: 0,
+              boxShadow: filter === 'ongoing' ? '0 0 6px #4fc3f7' : 'none'
+            }} />
+            Ongoing ({ongoingCount})
+          </button>
+        )}
+      </div>
 
       {loading && <p style={{ color: 'var(--text2)' }}>Loading...</p>}
 
       {!loading && watchlist.length === 0 && (
         <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text2)' }}>
-          <p>Your watchlist is empty. Search for movies above to add them.</p>
+          <p>{filter === 'ongoing' ? 'No ongoing TV shows.' : 'Your watchlist is empty. Search for movies above to add them.'}</p>
         </div>
       )}
 
@@ -33,9 +59,18 @@ export default function WatchlistPage() {
         {watchlist.map(m => (
           <MovieCard key={m._id} movie={m} onClick={() => setSelected(m)}
             actions={
-              <button onClick={() => setSelected(m)} className="btn btn-primary btn-sm">
-                Mark Watched
-              </button>
+              <>
+                {m.watch_status === 'ongoing' && (
+                  <span style={{
+                    fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 3,
+                    background: 'rgba(79,195,247,0.1)', color: '#4fc3f7',
+                    border: '1px solid rgba(79,195,247,0.3)', alignSelf: 'center'
+                  }}>Ongoing</span>
+                )}
+                <button onClick={() => setSelected(m)} className="btn btn-primary btn-sm">
+                  {m.watch_status === 'ongoing' ? 'Continue' : 'Mark Watched'}
+                </button>
+              </>
             }
           />
         ))}
