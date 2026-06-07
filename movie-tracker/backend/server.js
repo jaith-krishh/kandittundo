@@ -17,6 +17,15 @@ const helmet = require("helmet");
 
 const app = express();
 app.set("trust proxy", 1);
+
+// SEO: Redirect www to non-www to prevent duplicate content
+app.use((req, res, next) => {
+  if (req.headers.host && req.headers.host.startsWith('www.')) {
+    const newHost = req.headers.host.slice(4);
+    return res.redirect(301, req.protocol + '://' + newHost + req.originalUrl);
+  }
+  next();
+});
 app.use(helmet({
   hsts: {
     maxAge: 31536000,
@@ -27,6 +36,9 @@ app.use(helmet({
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 app.use(cors({ origin: FRONTEND_URL, credentials: true }));
+
+// Health check endpoint (Used by UptimeRobot/cron-job.org to keep Render instance awake)
+app.get("/api/health", (req, res) => res.status(200).send("OK"));
 
 // Payload size limits
 app.use(express.json({ limit: "1mb" }));
