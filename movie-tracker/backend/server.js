@@ -27,6 +27,7 @@ app.use((req, res, next) => {
   next();
 });
 app.use(helmet({
+  contentSecurityPolicy: false,
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
