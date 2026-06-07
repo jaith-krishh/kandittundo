@@ -126,7 +126,7 @@ export default function LandingPage() {
       <VantaBackground />
 
       {/* Hero */}
-      <div style={{
+      <header style={{
         minHeight: '100vh', display: 'flex', flexDirection: 'column',
         alignItems: 'center', justifyContent: 'center',
         textAlign: 'center', padding: '40px 24px',
@@ -151,29 +151,26 @@ export default function LandingPage() {
           </div>
 
           <h1 style={{
-            fontSize: 'clamp(36px, 7vw, 64px)', fontWeight: 700,
-            letterSpacing: '-2px', marginBottom: 20, lineHeight: 1,
+            fontSize: 'clamp(32px, 5vw, 56px)', fontWeight: 700,
+            letterSpacing: '-1px', marginBottom: 20, lineHeight: 1.15,
             background: 'linear-gradient(135deg, #fff 40%, #999 100%)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent'
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            maxWidth: 700
           }}>
-            kandittundo?
+            Track, rate, and rank every movie and show you watch.
           </h1>
 
           <p style={{
-            fontSize: 'clamp(14px, 2vw, 17px)', color: 'var(--text2)',
-            maxWidth: 420, lineHeight: 1.8, marginBottom: 12
+            fontSize: 'clamp(16px, 2vw, 18px)', color: 'var(--text2)',
+            maxWidth: 480, lineHeight: 1.6, marginBottom: 40
           }}>
-            Your personal space to track, rate, and rank every movie and show you watch.
-          </p>
-
-          <p style={{
-            fontSize: 13, color: '#555', marginBottom: 40
-          }}>
-            Free · No ads · Just your watchlist
+            kandittundo? is your free, ad-free personal space for everything cinema. No distractions, just your watchlist.
           </p>
 
           <a
             href={`${API_URL}/auth/google`}
+            role="button"
+            className="cta-btn"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 12,
               background: '#fff', color: '#1f1f1f',
@@ -213,10 +210,10 @@ export default function LandingPage() {
             <path d="M12 5v14M5 12l7 7 7-7"/>
           </svg>
         </div>
-      </div>
+      </header>
 
       {/* Features */}
-      <div style={{
+      <main style={{
         position: 'relative', zIndex: 1,
         maxWidth: 960, margin: '0 auto', padding: '40px 24px 100px'
       }}>
@@ -248,6 +245,8 @@ export default function LandingPage() {
           </p>
           <a
             href={`${API_URL}/auth/google`}
+            role="button"
+            className="cta-btn"
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 10,
               background: 'var(--accent)', color: '#fff',
@@ -270,7 +269,22 @@ export default function LandingPage() {
             Get started — it's free
           </a>
         </div>
-      </div>
+      </main>
+
+      {/* Footer / Trust & Compliance */}
+      <footer style={{
+        padding: '40px 24px', borderTop: '1px solid var(--border)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16,
+        fontSize: 13, color: 'var(--text2)',
+        position: 'relative', zIndex: 1
+      }}>
+        <div style={{ display: 'flex', gap: 24 }}>
+          <a href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</a>
+          <a href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</a>
+          <a href="mailto:hello@kandittundo.onrender.com" style={{ color: 'inherit', textDecoration: 'none' }}>Contact Us</a>
+        </div>
+        <p>© {new Date().getFullYear()} kandittundo?. All rights reserved.</p>
+      </footer>
 
       <style>{`
         @keyframes bounce {
