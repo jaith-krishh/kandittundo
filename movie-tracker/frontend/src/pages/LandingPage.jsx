@@ -190,10 +190,10 @@ export default function LandingPage() {
             }}
           >
             <svg width="20" height="20" viewBox="0 0 48 48">
-              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
             </svg>
             Continue with Google
           </a>
@@ -208,7 +208,7 @@ export default function LandingPage() {
         }}>
           <span>scroll</span>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M12 5v14M5 12l7 7 7-7"/>
+            <path d="M12 5v14M5 12l7 7 7-7" />
           </svg>
         </div>
       </header>
@@ -267,7 +267,7 @@ export default function LandingPage() {
               e.currentTarget.style.boxShadow = '0 4px 24px rgba(229,9,20,0.3)';
             }}
           >
-            Get started — it's free
+            Get started - it's free
           </a>
         </div>
       </main>
@@ -364,30 +364,86 @@ export default function LandingPage() {
             {activeModal === 'contact' && (
               <>
                 <h2 style={{ marginBottom: 20, fontSize: 24, fontWeight: 600 }}>Contact Us</h2>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   <a href="mailto:jaithkrishh@gmail.com" style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
-                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    display: 'flex', alignItems: 'center', gap: 16, padding: '18px 24px',
+                    background: 'rgba(20,20,20,0.6)', borderRadius: 14,
                     color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
-                    transition: 'background 0.2s'
-                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
-                    <span style={{ fontSize: 20 }}>📧</span> Email: jaithkrishh@gmail.com
+                    transition: 'all 0.2s ease', position: 'relative', overflow: 'hidden'
+                  }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      e.currentTarget.style.borderColor = '#4a4a4a';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(20,20,20,0.6)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}>
+                    <div style={{ color: 'var(--text2)', display: 'flex' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 2 }}>Email</span>
+                      <span style={{ fontSize: 15, fontWeight: 500 }}>jaithkrishh@gmail.com</span>
+                    </div>
                   </a>
+
                   <a href="tel:+918547710078" style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
-                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    display: 'flex', alignItems: 'center', gap: 16, padding: '18px 24px',
+                    background: 'rgba(20,20,20,0.6)', borderRadius: 14,
                     color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
-                    transition: 'background 0.2s'
-                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
-                    <span style={{ fontSize: 20 }}>📞</span> Phone: +91 8547710078
+                    transition: 'all 0.2s ease'
+                  }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      e.currentTarget.style.borderColor = '#4a4a4a';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(20,20,20,0.6)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}>
+                    <div style={{ color: 'var(--text2)', display: 'flex' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 2 }}>Phone</span>
+                      <span style={{ fontSize: 15, fontWeight: 500 }}>+91 8547710078</span>
+                    </div>
                   </a>
+
                   <a href="https://www.linkedin.com/in/jaith-krishna-446a66325" target="_blank" rel="noopener noreferrer" style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
-                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    display: 'flex', alignItems: 'center', gap: 16, padding: '18px 24px',
+                    background: 'rgba(20,20,20,0.6)', borderRadius: 14,
                     color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
-                    transition: 'background 0.2s'
-                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
-                    <span style={{ fontSize: 20 }}>💼</span> LinkedIn Profile
+                    transition: 'all 0.2s ease'
+                  }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                      e.currentTarget.style.borderColor = '#4a4a4a';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = 'rgba(20,20,20,0.6)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}>
+                    <div style={{ color: 'var(--text2)', display: 'flex' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path><rect x="2" y="9" width="4" height="12"></rect><circle cx="4" cy="4" r="2"></circle></svg>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 2 }}>LinkedIn</span>
+                      <span style={{ fontSize: 15, fontWeight: 500 }}>View Profile</span>
+                    </div>
                   </a>
                 </div>
               </>
