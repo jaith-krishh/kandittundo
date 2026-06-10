@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import VantaBackground from '../components/VantaBackground';
 
 const API_URL = import.meta.env.VITE_API_URL || '/api';
@@ -111,6 +111,7 @@ function FeatureCard({ title, desc, accent, index }) {
 
 export default function LandingPage() {
   const heroRef = useRef();
+  const [activeModal, setActiveModal] = useState(null);
 
   useEffect(() => {
     const el = heroRef.current;
@@ -279,9 +280,9 @@ export default function LandingPage() {
         position: 'relative', zIndex: 1
       }}>
         <div style={{ display: 'flex', gap: 24 }}>
-          <a href="/privacy" style={{ color: 'inherit', textDecoration: 'none' }}>Privacy Policy</a>
-          <a href="/terms" style={{ color: 'inherit', textDecoration: 'none' }}>Terms of Service</a>
-          <a href="mailto:hello@kandittundo.onrender.com" style={{ color: 'inherit', textDecoration: 'none' }}>Contact Us</a>
+          <button onClick={() => setActiveModal('privacy')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'none' }}>Privacy Policy</button>
+          <button onClick={() => setActiveModal('terms')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'none' }}>Terms of Service</button>
+          <button onClick={() => setActiveModal('contact')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'none' }}>Contact Us</button>
         </div>
         <p>© {new Date().getFullYear()} kandittundo?. All rights reserved.</p>
       </footer>
@@ -316,6 +317,84 @@ export default function LandingPage() {
           box-shadow: 0 12px 40px rgba(0,0,0,0.4);
         }
       `}</style>
+
+      {/* Modals */}
+      {activeModal && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24
+        }} onClick={() => setActiveModal(null)}>
+          <div style={{
+            background: '#141414', border: '1px solid var(--border)',
+            borderRadius: 16, padding: 32, maxWidth: 500, width: '100%',
+            position: 'relative', maxHeight: '85vh', overflowY: 'auto'
+          }} onClick={e => e.stopPropagation()}>
+            <button onClick={() => setActiveModal(null)} style={{
+              position: 'absolute', top: 16, right: 16,
+              background: 'transparent', border: 'none', color: 'var(--text2)',
+              cursor: 'pointer', padding: 8, fontSize: 18
+            }}>✕</button>
+
+            {activeModal === 'privacy' && (
+              <>
+                <h2 style={{ marginBottom: 20, fontSize: 24, fontWeight: 600 }}>Privacy Policy</h2>
+                <div style={{ color: 'var(--text2)', lineHeight: 1.6, fontSize: 14 }}>
+                  <p><strong>1. Information Collection:</strong> We collect your email address and basic profile information when you sign in with Google. We also store your movie and TV show tracking data (watchlist, ratings, reviews, history).</p>
+                  <p style={{ marginTop: 12 }}><strong>2. Use of Information:</strong> Your data is used solely to provide and improve the kandittundo? service. We do not sell your personal information to third parties.</p>
+                  <p style={{ marginTop: 12 }}><strong>3. Data Security:</strong> We implement reasonable security measures to protect your personal information.</p>
+                  <p style={{ marginTop: 12 }}><strong>4. Third-Party Services:</strong> We use Google for authentication. Their privacy policies also apply when you use their services to log in.</p>
+                </div>
+              </>
+            )}
+
+            {activeModal === 'terms' && (
+              <>
+                <h2 style={{ marginBottom: 20, fontSize: 24, fontWeight: 600 }}>Terms of Service</h2>
+                <div style={{ color: 'var(--text2)', lineHeight: 1.6, fontSize: 14 }}>
+                  <p><strong>1. Acceptance of Terms:</strong> By using kandittundo?, you agree to these Terms of Service. If you disagree, please do not use our service.</p>
+                  <p style={{ marginTop: 12 }}><strong>2. Service Description:</strong> kandittundo? is a personal movie and TV show tracking application provided "as is" without warranties of any kind.</p>
+                  <p style={{ marginTop: 12 }}><strong>3. User Conduct:</strong> You agree to use the service for personal, non-commercial purposes only. You are responsible for maintaining the security of your account.</p>
+                  <p style={{ marginTop: 12 }}><strong>4. Termination:</strong> We reserve the right to terminate or suspend access to our service immediately, without prior notice or liability, for any reason whatsoever.</p>
+                </div>
+              </>
+            )}
+
+            {activeModal === 'contact' && (
+              <>
+                <h2 style={{ marginBottom: 20, fontSize: 24, fontWeight: 600 }}>Contact Us</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <a href="mailto:jaithkrishh@gmail.com" style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
+                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
+                    transition: 'background 0.2s'
+                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                    <span style={{ fontSize: 20 }}>📧</span> Email: jaithkrishh@gmail.com
+                  </a>
+                  <a href="tel:+918547710078" style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
+                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
+                    transition: 'background 0.2s'
+                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                    <span style={{ fontSize: 20 }}>📞</span> Phone: +91 8547710078
+                  </a>
+                  <a href="https://www.linkedin.com/in/jaith-krishna-446a66325" target="_blank" rel="noopener noreferrer" style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: 16,
+                    background: 'rgba(255,255,255,0.05)', borderRadius: 12,
+                    color: 'var(--text)', textDecoration: 'none', border: '1px solid var(--border)',
+                    transition: 'background 0.2s'
+                  }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}>
+                    <span style={{ fontSize: 20 }}>💼</span> LinkedIn Profile
+                  </a>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
