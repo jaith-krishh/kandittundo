@@ -7,6 +7,8 @@ export default function VantaBackground() {
   useEffect(() => {
     if (!window.VANTA || !window.THREE) return;
 
+    if (effectRef.current) effectRef.current.destroy();
+
     effectRef.current = window.VANTA.DOTS({
       el: vantaRef.current,
       THREE: window.THREE,

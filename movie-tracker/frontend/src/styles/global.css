@@ -16,7 +16,7 @@
 }
 
 html {
-  background: #000;
+  background: var(--bg);
 }
 
 body {

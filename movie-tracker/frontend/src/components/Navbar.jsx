@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { updateProfile } from '../api';
+import SettingsModal from './SettingsModal';
 
 const NAV = [
   { id: 'watchlist', label: 'Watchlist' },
@@ -12,12 +12,8 @@ const NAV = [
   { id: 'import', label: 'Import' }
 ];
 
-function ProfileDropdown({ user, setUser, logout }) {
+function ProfileDropdown({ user, logout, onOpenSettings }) {
   const [open, setOpen] = useState(false);
-  const [editName, setEditName] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const fileRef = useRef();
   const dropRef = useRef();
 
   useEffect(() => {
@@ -25,34 +21,6 @@ function ProfileDropdown({ user, setUser, logout }) {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
-
-  const handleAvatarChange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      setSaving(true);
-      try {
-        const updated = await updateProfile({ avatar: ev.target.result });
-        setUser(prev => ({ ...prev, avatar: updated.avatar }));
-      } finally {
-        setSaving(false);
-      }
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveName = async () => {
-    if (!editName.trim()) return;
-    setSaving(true);
-    try {
-      const updated = await updateProfile({ displayName: editName.trim() });
-      setUser(prev => ({ ...prev, displayName: updated.displayName }));
-      setEditing(false);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   return (
     <div ref={dropRef} style={{ position: 'relative' }}>
@@ -86,91 +54,44 @@ function ProfileDropdown({ user, setUser, logout }) {
         <div style={{
           position: 'absolute', top: 'calc(100% + 8px)', right: 0,
           background: 'var(--bg2)', border: '1px solid var(--border)',
-          borderRadius: 10, padding: 16, minWidth: 220,
+          borderRadius: 10, padding: 8, minWidth: 200,
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)', zIndex: 200
         }}>
-          {/* Avatar */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div
-              onClick={() => fileRef.current.click()}
-              style={{
-                width: 64, height: 64, borderRadius: '50%', cursor: 'pointer',
-                overflow: 'hidden', border: '2px dashed var(--border)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                position: 'relative'
-              }}
-              onMouseEnter={e => e.currentTarget.querySelector('.overlay').style.opacity = 1}
-              onMouseLeave={e => e.currentTarget.querySelector('.overlay').style.opacity = 0}
-            >
-              {user.avatar
-                ? <img src={user.avatar} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', background: 'var(--accent)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22, fontWeight: 700, color: '#fff' }}>
-                    {user.displayName?.[0]?.toUpperCase() || '?'}
-                  </div>
-              }
-              <div className="overlay" style={{
-                position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.6)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                opacity: 0, transition: 'opacity 0.2s', fontSize: 11, color: '#fff', fontWeight: 600
-              }}>
-                Change
-              </div>
+          {/* Avatar and Info */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 8px 16px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
+            {user.avatar
+              ? <img src={user.avatar} alt={user.displayName} style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+              : <div style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#fff' }}>
+                  {user.displayName?.[0]?.toUpperCase() || '?'}
+                </div>
+            }
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 14, color: 'var(--text)', fontWeight: 500 }}>{user.displayName}</span>
+              <span style={{ fontSize: 12, color: 'var(--text2)' }}>{user.email || user.username}</span>
             </div>
-            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
-            <span style={{ fontSize: 11, color: 'var(--text2)' }}>click to change photo</span>
           </div>
 
-          {/* Display name */}
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 6 }}>Display name</div>
-            {editing ? (
-              <div style={{ display: 'flex', gap: 6 }}>
-                <input
-                  autoFocus
-                  value={editName}
-                  onChange={e => setEditName(e.target.value)}
-                  onKeyDown={e => e.key === 'Enter' && handleSaveName()}
-                  style={{
-                    flex: 1, background: 'rgb(28,28,30)', border: 'none', borderRadius: 6,
-                    color: '#fff', padding: '6px 8px', fontSize: 13, outline: 'none',
-                    boxShadow: '0 0 0 2px skyblue'
-                  }}
-                  maxLength={40}
-                />
-                <button onClick={handleSaveName} disabled={saving}
-                  style={{ background: 'var(--accent)', border: 'none', borderRadius: 6,
-                    color: '#fff', padding: '6px 10px', fontSize: 12, cursor: 'pointer', fontWeight: 600 }}>
-                  {saving ? '...' : 'Save'}
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 14, color: 'var(--text)' }}>{user.displayName}</span>
-                <button onClick={() => { setEditName(user.displayName); setEditing(true); }}
-                  style={{ background: 'none', border: 'none', color: 'var(--text2)', cursor: 'pointer',
-                    fontSize: 12, padding: '2px 6px', borderRadius: 4 }}
-                  onMouseEnter={e => e.currentTarget.style.color = 'var(--text)'}
-                  onMouseLeave={e => e.currentTarget.style.color = 'var(--text2)'}>
-                  Edit
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-            <button onClick={logout}
-              style={{
-                width: '100%', background: 'none', border: '1px solid var(--border)',
-                borderRadius: 6, color: 'var(--text2)', padding: '8px', fontSize: 13,
-                cursor: 'pointer', transition: 'color 0.2s, border-color 0.2s'
-              }}
-              onMouseEnter={e => { e.currentTarget.style.color = 'var(--accent)'; e.currentTarget.style.borderColor = 'var(--accent)'; }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'var(--text2)'; e.currentTarget.style.borderColor = 'var(--border)'; }}>
-              Logout
-            </button>
-          </div>
+          <button onClick={() => { setOpen(false); onOpenSettings(); }}
+            style={{
+              width: '100%', background: 'none', border: 'none', textAlign: 'left',
+              borderRadius: 6, color: 'var(--text)', padding: '10px 12px', fontSize: 13,
+              cursor: 'pointer', transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+            Settings
+          </button>
+          
+          <button onClick={() => { setOpen(false); logout(); }}
+            style={{
+              width: '100%', background: 'none', border: 'none', textAlign: 'left',
+              borderRadius: 6, color: 'var(--text)', padding: '10px 12px', fontSize: 13,
+              cursor: 'pointer', transition: 'background 0.2s', marginTop: 2
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+            Logout
+          </button>
         </div>
       )}
     </div>
@@ -179,6 +100,7 @@ function ProfileDropdown({ user, setUser, logout }) {
 
 export default function Navbar({ page, setPage }) {
   const [open, setOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const { user, setUser, logout } = useAuth();
 
   return (
@@ -212,7 +134,7 @@ export default function Navbar({ page, setPage }) {
 
         {user && (
           <div style={{ marginLeft: 'auto', flexShrink: 0 }} className="hide-mobile">
-            <ProfileDropdown user={user} setUser={setUser} logout={logout} />
+            <ProfileDropdown user={user} logout={logout} onOpenSettings={() => setSettingsOpen(true)} />
           </div>
         )}
 
@@ -245,15 +167,24 @@ export default function Navbar({ page, setPage }) {
                   </div>
               }
               <span style={{ color: 'var(--text)', fontSize: 14, flex: 1 }}>{user.displayName}</span>
-              <button onClick={logout}
-                style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
-                  color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer' }}>
-                Logout
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <button onClick={() => { setOpen(false); setSettingsOpen(true); }}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                    color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer', marginBottom: 8 }}>
+                  Settings
+                </button>
+                <button onClick={() => { setOpen(false); logout(); }}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                    color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer' }}>
+                  Logout
+                </button>
+              </div>
             </div>
           )}
         </div>
       )}
+
+      {settingsOpen && <SettingsModal user={user} setUser={setUser} logout={logout} onClose={() => setSettingsOpen(false)} />}
 
       <style>{`
         @media (max-width: 768px) {

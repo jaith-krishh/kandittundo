@@ -1,4 +1,4 @@
-﻿import axios from 'axios';
+import axios from 'axios';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || '/api',
@@ -24,3 +24,4 @@ export const bulkRank = (rankings) => API.put('/movies/rank/bulk', { rankings })
 export const getStats = () => API.get('/movies/stats/summary').then(r => r.data);
 export const lookupImport = (titles) => API.post('/import/lookup', { titles }).then(r => r.data);
 export const getRandomMovie = (params) => API.get('/random', { params }).then(r => r.data);
+export const deleteAccount = () => API.delete('/auth/account').then(r => r.data);

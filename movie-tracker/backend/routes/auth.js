@@ -1,6 +1,7 @@
 const express = require('express');
 const passport = require('passport');
 const User = require('../models/User');
+const Movie = require('../models/Movie');
 const router = express.Router();
 
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
@@ -75,6 +76,20 @@ router.post('/profile', async (req, res) => {
 // POST /api/auth/logout
 router.post('/logout', (req, res) => {
   req.logout(() => res.json({ message: 'Logged out' }));
+});
+
+// DELETE /api/auth/account - delete user account and all data
+router.delete('/account', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  try {
+    await Movie.deleteMany({ userId: req.user._id });
+    await User.findByIdAndDelete(req.user._id);
+    req.logout(() => {
+      res.json({ message: 'Account deleted successfully' });
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Check username availability

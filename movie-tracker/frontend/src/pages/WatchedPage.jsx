@@ -34,6 +34,38 @@ export default function WatchedPage() {
 
   const toggleGenre = (g) => setGenres(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
+  const exportCSV = () => {
+    if (watched.length === 0) return;
+    const headers = ['Title', 'Media Type', 'Rating', 'Rank', 'Date Watched', 'Genres', 'Rewatch', 'Review'];
+    const escapeCSV = (str) => {
+      if (str == null) return '';
+      const stringified = String(str);
+      if (stringified.includes(',') || stringified.includes('"') || stringified.includes('\n')) {
+        return `"${stringified.replace(/"/g, '""')}"`;
+      }
+      return stringified;
+    };
+    const rows = watched.map(m => [
+      escapeCSV(m.title),
+      escapeCSV(m.media_type),
+      escapeCSV(m.rating),
+      escapeCSV(m.rank),
+      escapeCSV(m.date_watched ? new Date(m.date_watched).toLocaleDateString() : ''),
+      escapeCSV((m.genres || []).join(', ')),
+      escapeCSV(m.rewatch),
+      escapeCSV(m.review)
+    ].join(','));
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'kandittundo_watched.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -88,6 +120,14 @@ export default function WatchedPage() {
             <option value="desc">↓ Desc</option>
             <option value="asc">↑ Asc</option>
           </select>
+          <button onClick={exportCSV} className="btn btn-ghost btn-sm" title="Export to CSV" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Export
+          </button>
           <button onClick={() => setShowFilters(!showFilters)} className="btn btn-ghost btn-sm">
             Filters {(genres.length || minRating || maxRating || rewatch) ? '●' : ''}
           </button>

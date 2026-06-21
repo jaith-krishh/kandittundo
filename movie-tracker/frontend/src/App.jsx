@@ -18,8 +18,10 @@ import VantaBackground from './components/VantaBackground';
 
 function AppInner() {
   const { user, authLoading } = useAuth();
-  const [page, setPage] = useState('watchlist');
+  const [page, setPage] = useState('watched');
   const [appReady, setAppReady] = useState(false);
+
+  console.log("AppInner render:", { user, authLoading, appReady });
 
   useEffect(() => {
     const timer = setTimeout(() => setAppReady(true), 1800);

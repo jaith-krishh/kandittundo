@@ -7,10 +7,12 @@ export default function WatchlistPage() {
   const { movies, fetchMovies, loading, removeMovie } = useMovies();
   const [selected, setSelected] = useState(null);
   const [filter, setFilter] = useState('all'); // 'all' | 'ongoing'
+  const [mediaType, setMediaType] = useState('all');
 
   useEffect(() => { fetchMovies({ status: 'watchlist' }); }, []);
 
-  const allWatchlist = movies.filter(m => m.status === 'watchlist');
+  const allWatchlist = movies.filter(m => m.status === 'watchlist')
+    .filter(m => mediaType === 'all' || m.media_type === mediaType);
   const ongoingCount = allWatchlist.filter(m => m.watch_status === 'ongoing').length;
   const watchlist = filter === 'ongoing'
     ? allWatchlist.filter(m => m.watch_status === 'ongoing')
@@ -22,6 +24,20 @@ export default function WatchlistPage() {
         <h1 style={{ fontSize: 22, fontWeight: 700 }}>
           Watchlist <span style={{ color: 'var(--text2)', fontSize: 16 }}>({watchlist.length})</span>
         </h1>
+        {/* Media type toggle */}
+        <div style={{ display: 'flex', gap: 4 }}>
+          {[['all', 'All'], ['movie', 'Films'], ['tv', 'TV']].map(([val, label]) => (
+            <button key={val} onClick={() => setMediaType(val)}
+              className="btn btn-ghost btn-sm"
+              style={{
+                background: mediaType === val ? 'var(--accent)' : 'transparent',
+                color: mediaType === val ? '#fff' : 'var(--text2)',
+                borderColor: mediaType === val ? 'var(--accent)' : 'var(--border)',
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
         {ongoingCount > 0 && (
           <button
             onClick={() => setFilter(f => f === 'ongoing' ? 'all' : 'ongoing')}
