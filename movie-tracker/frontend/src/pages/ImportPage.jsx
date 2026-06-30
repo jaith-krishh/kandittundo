@@ -120,7 +120,13 @@ export default function ImportPage() {
     setLoading(true);
     setProgress(`Looking up ${titles.length} titles...`);
     try {
-      const results = await lookupImport(titles);
+      let results = [];
+      for (let i = 0; i < titles.length; i += 20) {
+        setProgress(`Looking up titles ${i + 1}-${Math.min(i + 20, titles.length)} of ${titles.length}...`);
+        const chunk = titles.slice(i, i + 20);
+        const chunkResults = await lookupImport(chunk);
+        results = results.concat(chunkResults);
+      }
       setItems(results.map((r, i) => {
         const csvRating = parsed[i]?.rating ?? null;
         return { ...r, addAs: csvRating != null ? 'watched' : 'watchlist', csvRating };

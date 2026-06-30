@@ -71,6 +71,17 @@ function ProfileDropdown({ user, logout, onOpenSettings }) {
             </div>
           </div>
 
+          <button onClick={() => { setOpen(false); window.open(`/u/${user.username}`, '_blank'); }}
+            style={{
+              width: '100%', background: 'none', border: 'none', textAlign: 'left',
+              borderRadius: 6, color: 'var(--text)', padding: '10px 12px', fontSize: 13,
+              cursor: 'pointer', transition: 'background 0.2s'
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}>
+            Public Profile
+          </button>
+
           <button onClick={() => { setOpen(false); onOpenSettings(); }}
             style={{
               width: '100%', background: 'none', border: 'none', textAlign: 'left',
@@ -168,6 +179,11 @@ export default function Navbar({ page, setPage }) {
               }
               <span style={{ color: 'var(--text)', fontSize: 14, flex: 1 }}>{user.displayName}</span>
               <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                <button onClick={() => { setOpen(false); window.open(`/u/${user.username}`, '_blank'); }}
+                  style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
+                    color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer', marginBottom: 8, textAlign: 'left' }}>
+                  Public Profile
+                </button>
                 <button onClick={() => { setOpen(false); setSettingsOpen(true); }}
                   style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
                     color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer', marginBottom: 8 }}>

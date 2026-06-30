@@ -15,6 +15,7 @@ import LandingPage from './pages/LandingPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import LoadingScreen from './components/LoadingScreen';
 import VantaBackground from './components/VantaBackground';
+import PublicProfilePage from './pages/PublicProfilePage';
 
 function AppInner() {
   const { user, authLoading } = useAuth();
@@ -33,6 +34,17 @@ function AppInner() {
       window.history.replaceState({}, '', '/');
     }
   }, []);
+
+  const path = window.location.pathname;
+  if (path.startsWith('/u/')) {
+    const username = path.split('/')[2];
+    return (
+      <MovieProvider>
+        <VantaBackground />
+        <PublicProfilePage username={username} />
+      </MovieProvider>
+    );
+  }
 
   if (!appReady || authLoading) return <LoadingScreen />;
 

@@ -19,6 +19,8 @@ router.post('/lookup', async (req, res) => {
   const { titles } = req.body;
   if (!Array.isArray(titles) || titles.length === 0)
     return res.status(400).json({ error: 'No titles provided' });
+  if (titles.length > 500)
+    return res.status(400).json({ error: 'Too many titles provided (max 500)' });
 
   const results = [];
 

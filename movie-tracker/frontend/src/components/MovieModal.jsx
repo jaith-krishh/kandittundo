@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useMovies } from '../context/MovieContext';
-import { getTrailer } from '../api';
+import { getTrailer, getProviders } from '../api';
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -16,6 +16,7 @@ export default function MovieModal({ movie, onClose }) {
   const [transitioning, setTransitioning] = useState(false);
   const [overview, setOverview] = useState(movie.overview || '');
   const [tmdbRating, setTmdbRating] = useState(movie.tmdb_rating || null);
+  const [providers, setProviders] = useState([]);
 
   const isTV = movie.media_type === 'tv';
   const [totalSeasons, setTotalSeasons] = useState(movie.total_seasons || null);
@@ -42,6 +43,7 @@ export default function MovieModal({ movie, onClose }) {
   useEffect(() => {
     const type = movie.media_type || 'movie';
     getTrailer(movie.movie_id, type).then(d => setTrailer(d.key)).catch(() => {});
+    getProviders(movie.movie_id, type).then(data => setProviders(data)).catch(() => {});
 
     if (movie.movie_id) {
       axios.get(`${API_URL}/tmdb/details/${type}/${movie.movie_id}`)
@@ -389,6 +391,20 @@ export default function MovieModal({ movie, onClose }) {
             {tmdbRating && (
               <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600, marginBottom: 8 }}>
                 IMDb {tmdbRating} / 10
+              </div>
+            )}
+
+            {providers && providers.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, color: 'var(--text2)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
+                  Where to watch
+                </div>
+                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                  {providers.slice(0, 5).map(p => (
+                    <img key={p.provider_id} src={p.logo_path} alt={p.provider_name} title={p.provider_name}
+                      style={{ width: 28, height: 28, borderRadius: 6, objectFit: 'cover' }} />
+                  ))}
+                </div>
               </div>
             )}
 

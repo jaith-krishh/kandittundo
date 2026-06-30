@@ -94,4 +94,32 @@ router.get('/trailer/:type/:id', async (req, res) => {
   }
 });
 
+// GET /api/tmdb/providers/:type/:id
+router.get('/providers/:type/:id', async (req, res) => {
+  const { type, id } = req.params;
+  const key = `providers:${type}:${id}`;
+  if (cache[key]) return res.json(cache[key]);
+  try {
+    const { data } = await axios.get(`${TMDB_BASE}/${type}/${id}/watch/providers`, {
+      params: { api_key: API_KEY }, timeout: 8000
+    });
+    const results = data.results || {};
+    // Default to IN, fallback to US
+    const providersData = results.IN || results.US || null;
+    const flatrate = providersData ? (providersData.flatrate || []) : [];
+    
+    // Map to just id, name, logo
+    const providers = flatrate.map(p => ({
+      provider_id: p.provider_id,
+      provider_name: p.provider_name,
+      logo_path: p.logo_path ? `https://image.tmdb.org/t/p/w92${p.logo_path}` : null
+    }));
+    
+    cache[key] = providers;
+    res.json(providers);
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch providers' });
+  }
+});
+
 module.exports = router;

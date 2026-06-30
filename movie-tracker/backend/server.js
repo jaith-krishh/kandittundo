@@ -160,6 +160,7 @@ app.use("/api/movies", require("./routes/movies"));
 app.use("/api/tmdb", require("./routes/tmdb"));
 app.use("/api/import", require("./routes/import"));
 app.use("/api/random", require("./routes/random"));
+app.use("/api/public", require("./routes/public"));
 
 const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));

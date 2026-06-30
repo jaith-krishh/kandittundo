@@ -11,10 +11,12 @@ export const logoutUser = () => API.post('/auth/logout').then(r => r.data);
 export const setupProfile = (data) => API.post('/auth/setup', data).then(r => r.data);
 export const updateProfile = (data) => API.post('/auth/profile', data).then(r => r.data);
 export const checkUsername = (username) => API.get(`/auth/check-username/${username}`).then(r => r.data);
+export const getPublicProfile = (username) => API.get(`/public/user/${username}`).then(r => r.data);
 
 export const searchTMDB = (q, lang = '') => API.get(`/tmdb/search?q=${encodeURIComponent(q)}${lang ? `&lang=${lang}` : ''}`).then(r => r.data);
 export const getTrailer = (id, type = 'movie') => API.get(`/tmdb/trailer/${type}/${id}`).then(r => r.data);
 export const getTVDetails = (id) => API.get(`/tmdb/details/tv/${id}`).then(r => r.data);
+export const getProviders = (id, type = 'movie') => API.get(`/tmdb/providers/${type}/${id}`).then(r => r.data);
 
 export const getMovies = (params) => API.get('/movies', { params }).then(r => r.data);
 export const addMovie = (data) => API.post('/movies', data).then(r => r.data);
@@ -22,6 +24,6 @@ export const updateMovie = (id, data) => API.put(`/movies/${id}`, data).then(r =
 export const deleteMovie = (id) => API.delete(`/movies/${id}`).then(r => r.data);
 export const bulkRank = (rankings) => API.put('/movies/rank/bulk', { rankings }).then(r => r.data);
 export const getStats = () => API.get('/movies/stats/summary').then(r => r.data);
-export const lookupImport = (titles) => API.post('/import/lookup', { titles }).then(r => r.data);
+export const lookupImport = (titles) => API.post('/import/lookup', { titles }, { timeout: 30000 }).then(r => r.data);
 export const getRandomMovie = (params) => API.get('/random', { params }).then(r => r.data);
 export const deleteAccount = () => API.delete('/auth/account').then(r => r.data);
