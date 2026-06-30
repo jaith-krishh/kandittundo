@@ -63,7 +63,18 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
       padding: 24
     }} onClick={onClose}>
       
-      <div style={{
+      <style>{`
+        .settings-container { flex-direction: row; }
+        .settings-sidebar { width: 220px; border-right: 1px solid var(--border); padding: 32px 0; }
+        .settings-content { padding: 40px; }
+        @media (max-width: 768px) {
+          .settings-container { flex-direction: column !important; }
+          .settings-sidebar { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; padding: 16px 0 !important; }
+          .settings-content { padding: 20px !important; }
+        }
+      `}</style>
+
+      <div className="settings-container" style={{
         background: 'var(--bg)', border: '1px solid var(--border)',
         borderRadius: 16, width: '100%', maxWidth: 800, height: '600px', maxHeight: '90vh',
         display: 'flex', overflow: 'hidden',
@@ -72,9 +83,9 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
       }} onClick={e => e.stopPropagation()}>
         
         {/* Sidebar */}
-        <div style={{
-          width: 220, background: 'var(--bg2)', borderRight: '1px solid var(--border)',
-          display: 'flex', flexDirection: 'column', padding: '32px 0', flexShrink: 0
+        <div className="settings-sidebar" style={{
+          background: 'var(--bg2)',
+          display: 'flex', flexDirection: 'column', flexShrink: 0
         }}>
           <div style={{ padding: '0 20px', marginBottom: 32, fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
             Settings
@@ -115,7 +126,7 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
         </div>
 
         {/* Content */}
-        <div style={{ flex: 1, padding: '40px', overflowY: 'auto' }}>
+        <div className="settings-content" style={{ flex: 1, overflowY: 'auto' }}>
           {tab === 'settings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 500 }}>
               
