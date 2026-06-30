@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SettingsModal from './SettingsModal';
+import PublicProfileModal from './PublicProfileModal';
 
 import { createPortal } from 'react-dom';
 
@@ -14,10 +15,10 @@ const NAV = [
   { id: 'import', label: 'Import' }
 ];
 
-function SearchUserModal({ onClose }) {
+function SearchUserModal({ onClose, onSearch }) {
   const [username, setUsername] = useState('');
   const handleGo = () => {
-    if (username.trim()) window.location.href = `/u/${username.trim()}`;
+    if (username.trim()) onSearch(username.trim());
   };
   if (typeof document === 'undefined') return null;
   return createPortal(
@@ -136,6 +137,7 @@ export default function Navbar({ page, setPage }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchedUser, setSearchedUser] = useState(null);
   const { user, setUser, logout } = useAuth();
 
   return (
@@ -225,7 +227,8 @@ export default function Navbar({ page, setPage }) {
       )}
 
       {settingsOpen && <SettingsModal user={user} setUser={setUser} logout={logout} onClose={() => setSettingsOpen(false)} />}
-      {searchOpen && <SearchUserModal onClose={() => setSearchOpen(false)} />}
+      {searchOpen && <SearchUserModal onClose={() => setSearchOpen(false)} onSearch={(u) => { setSearchOpen(false); setSearchedUser(u); }} />}
+      {searchedUser && <PublicProfileModal username={searchedUser} onClose={() => setSearchedUser(null)} />}
 
       <style>{`
         @media (max-width: 768px) {

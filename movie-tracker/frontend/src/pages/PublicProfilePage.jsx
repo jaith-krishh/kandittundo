@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { getPublicProfile } from '../api';
+import { useAuth } from '../context/AuthContext';
 
 export default function PublicProfilePage({ username }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     getPublicProfile(username)
@@ -97,36 +99,51 @@ export default function PublicProfilePage({ username }) {
         )}
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 4px 0' }}>{profile.displayName}</h1>
-          <div style={{ color: 'var(--text2)', fontSize: 16 }}>@{profile.username}</div>
-          <div style={{ marginTop: 12, display: 'flex', gap: 16 }}>
-            <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
-              <span style={{ color: 'var(--accent)' }}>{stats.totalWatched}</span> Watched
+              <div style={{ color: 'var(--text2)', fontSize: 16 }}>@{profile.username}</div>
+              
+              {!data.isPrivate && (
+                <div style={{ marginTop: 12, display: 'flex', gap: 16 }}>
+                  <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
+                    <span style={{ color: 'var(--accent)' }}>{stats?.totalWatched || 0}</span> Watched
+                  </div>
+                  {stats?.topGenre && (
+                    <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
+                      Top Genre: <span style={{ color: 'var(--gold)' }}>{stats.topGenre}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
-            {stats.topGenre && (
-              <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
-                Top Genre: <span style={{ color: 'var(--gold)' }}>{stats.topGenre}</span>
-              </div>
-            )}
           </div>
-        </div>
-      </div>
 
-      {/* Top Movies */}
-      {topMovies && topMovies.length > 0 && (
-        <div style={{ marginTop: 48 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>Top 10 Ranked</h2>
-          {renderMovieGrid(topMovies, true)}
+      {data.isPrivate ? (
+        <div style={{ marginTop: 48, textAlign: 'center', color: 'var(--text2)', padding: '40px 0' }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
+          <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>This account is private</h2>
+          <p>Only the owner can see their movie list and stats.</p>
         </div>
+      ) : (
+        <>
+          {/* Top Movies */}
+          {topMovies && topMovies.length > 0 && (
+            <div style={{ marginTop: 48 }}>
+              <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>Top 10 Rated</h2>
+              {renderMovieGrid(topMovies, true)}
+            </div>
+          )}
+        </>
       )}
 
       {/* Footer CTA */}
-      <div style={{ marginTop: 'auto', paddingTop: 60, paddingBottom: 20, textAlign: 'center' }}>
-        <div className="glass-panel" style={{ padding: '32px 20px', background: 'rgba(229, 9, 20, 0.05)', borderColor: 'rgba(229, 9, 20, 0.2)' }}>
-          <h3 style={{ margin: '0 0 12px 0', fontSize: 20 }}>Create your own movie list</h3>
-          <p style={{ color: 'var(--text2)', margin: '0 0 20px 0', fontSize: 14 }}>Track, rate, and rank everything you watch.</p>
-          <a href="/" className="btn btn-primary" style={{ textDecoration: 'none' }}>Get Started Free</a>
+      {!user && (
+        <div style={{ marginTop: 'auto', paddingTop: 60, paddingBottom: 20, textAlign: 'center' }}>
+          <div className="glass-panel" style={{ padding: '32px 20px', background: 'rgba(229, 9, 20, 0.05)', borderColor: 'rgba(229, 9, 20, 0.2)' }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: 20 }}>Create your own movie list</h3>
+            <p style={{ color: 'var(--text2)', margin: '0 0 20px 0', fontSize: 14 }}>Track, rate, and rank everything you watch.</p>
+            <a href="/" className="btn btn-primary" style={{ textDecoration: 'none' }}>Get Started Free</a>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

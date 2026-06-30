@@ -20,12 +20,20 @@ router.get('/user/:username', async (req, res) => {
     }
     
     if (user.isPrivate) {
-      return res.status(403).json({ error: 'This account is private' });
+      return res.json({
+        profile: {
+          displayName: user.displayName,
+          username: user.username,
+          avatar: user.avatar,
+          joinedAt: user.createdAt
+        },
+        isPrivate: true
+      });
     }
 
-    // Top ranked movies
-    const topMovies = await Movie.find({ userId: user._id, rank: { $ne: null } })
-      .sort({ rank: 1 })
+    // Top rated movies
+    const topMovies = await Movie.find({ userId: user._id, status: 'watched', rating: { $ne: null } })
+      .sort({ rating: -1, date_watched: -1 })
       .limit(10)
       .select('title poster_url rating rank movie_id media_type release_year');
 
