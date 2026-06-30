@@ -30,8 +30,8 @@ router.get('/google/callback',
 // GET /api/auth/me — returns current user (or 401)
 router.get('/me', (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-  const { _id, username, displayName, avatar, profileComplete, email } = req.user;
-  res.json({ _id, username, displayName, avatar, profileComplete, email });
+  const { _id, username, displayName, avatar, profileComplete, email, isPrivate } = req.user;
+  res.json({ _id, username, displayName, avatar, profileComplete, email, isPrivate });
 });
 
 // POST /api/auth/setup — complete profile after first login
@@ -68,14 +68,14 @@ router.post('/setup', async (req, res) => {
 // POST /api/auth/profile — update profile (display name / avatar)
 router.post('/profile', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-  const { displayName, avatar } = req.body;
+  const { displayName, avatar, isPrivate } = req.body;
   try {
     const user = await User.findByIdAndUpdate(
       req.user._id,
-      { ...(displayName && { displayName }), ...(avatar !== undefined && { avatar }) },
+      { ...(displayName && { displayName }), ...(avatar !== undefined && { avatar }), ...(isPrivate !== undefined && { isPrivate }) },
       { new: true }
     );
-    res.json({ _id: user._id, username: user.username, displayName: user.displayName, avatar: user.avatar });
+    res.json({ _id: user._id, username: user.username, displayName: user.displayName, avatar: user.avatar, isPrivate: user.isPrivate });
   } catch (err) {
     console.error('profile update error:', err);
     res.status(500).json({ error: 'Internal server error' });

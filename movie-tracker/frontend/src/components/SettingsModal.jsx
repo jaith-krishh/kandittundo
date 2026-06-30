@@ -10,6 +10,9 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
   const [savingAvatar, setSavingAvatar] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [isPrivate, setIsPrivate] = useState(user.isPrivate || false);
+  const [savingPrivacy, setSavingPrivacy] = useState(false);
+  const [copySuccess, setCopySuccess] = useState('');
   
   const fileRef = useRef();
 
@@ -38,6 +41,23 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
     } finally {
       setSavingName(false);
     }
+  };
+
+  const handleTogglePrivacy = async () => {
+    setSavingPrivacy(true);
+    try {
+      const updated = await updateProfile({ isPrivate: !isPrivate });
+      setIsPrivate(updated.isPrivate);
+      setUser(prev => ({ ...prev, isPrivate: updated.isPrivate }));
+    } finally {
+      setSavingPrivacy(false);
+    }
+  };
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(user.username);
+    setCopySuccess('Copied!');
+    setTimeout(() => setCopySuccess(''), 2000);
   };
 
   const handleDeleteAccount = async () => {
@@ -179,6 +199,46 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
                   <button onClick={handleSaveName} disabled={savingName || editName.trim() === user.displayName} className="btn btn-primary" style={{ padding: '0 24px', borderRadius: 8 }}>
                     {savingName ? 'Saving...' : 'Save'}
                   </button>
+                </div>
+              </div>
+
+              <div style={{ height: 1, background: 'var(--border)' }} />
+
+              {/* User ID & Privacy */}
+              <div>
+                <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Privacy & Sharing</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  
+                  {/* Copy User ID */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Your User ID</div>
+                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>Share this ID so others can search for your profile.</div>
+                    </div>
+                    <button onClick={handleCopyId} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 90, justifyContent: 'center' }}>
+                      {copySuccess ? copySuccess : 'Copy ID'}
+                    </button>
+                  </div>
+
+                  {/* Private Profile Toggle */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Private Profile</div>
+                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>When enabled, your profile will be hidden from other users.</div>
+                    </div>
+                    <button onClick={handleTogglePrivacy} disabled={savingPrivacy}
+                      style={{
+                        width: 44, height: 24, borderRadius: 12, border: 'none',
+                        background: isPrivate ? 'var(--green)' : 'var(--bg3)',
+                        position: 'relative', cursor: 'pointer', transition: 'background 0.3s'
+                      }}>
+                      <div style={{
+                        width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                        position: 'absolute', top: 2, left: isPrivate ? 22 : 2,
+                        transition: 'left 0.3s'
+                      }} />
+                    </button>
+                  </div>
                 </div>
               </div>
 

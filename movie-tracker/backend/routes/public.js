@@ -14,10 +14,13 @@ router.get('/user/:username', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Find user (case-insensitive)
     const user = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
+    }
+    
+    if (user.isPrivate) {
+      return res.status(403).json({ error: 'This account is private' });
     }
 
     // Top ranked movies
@@ -26,12 +29,16 @@ router.get('/user/:username', async (req, res) => {
       .limit(10)
       .select('title poster_url rating rank movie_id media_type release_year');
 
-    // Recent watches
-    const recentMovies = await Movie.find({ userId: user._id, status: 'watched' })
-      .sort({ date_watched: -1 })
-      .limit(10)
-      .select('title poster_url rating date_watched movie_id media_type release_year');
-      
+    // Top genre
+    const genreStats = await Movie.aggregate([
+      { $match: { userId: user._id, status: 'watched' } },
+      { $unwind: '$genres' },
+      { $group: { _id: '$genres', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 1 }
+    ]);
+    const topGenre = genreStats.length > 0 ? genreStats[0]._id : null;
+
     // Stats
     const totalWatched = await Movie.countDocuments({ userId: user._id, status: 'watched' });
 
@@ -43,10 +50,10 @@ router.get('/user/:username', async (req, res) => {
         joinedAt: user.createdAt
       },
       stats: {
-        totalWatched
+        totalWatched,
+        topGenre
       },
-      topMovies,
-      recentMovies
+      topMovies
     });
 
   } catch (err) {

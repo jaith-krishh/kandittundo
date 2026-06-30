@@ -7,6 +7,7 @@ const UserSchema = new mongoose.Schema({
   displayName: { type: String, default: '' },
   avatar: { type: String, default: null }, // base64 string
   profileComplete: { type: Boolean, default: false },
+  isPrivate: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now }
 });
 

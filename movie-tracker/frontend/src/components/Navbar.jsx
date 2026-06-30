@@ -2,6 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import SettingsModal from './SettingsModal';
 
+import { createPortal } from 'react-dom';
+
 const NAV = [
   { id: 'watchlist', label: 'Watchlist' },
   { id: 'watched', label: 'Watched' },
@@ -12,7 +14,28 @@ const NAV = [
   { id: 'import', label: 'Import' }
 ];
 
-function ProfileDropdown({ user, logout, onOpenSettings }) {
+function SearchUserModal({ onClose }) {
+  const [username, setUsername] = useState('');
+  const handleGo = () => {
+    if (username.trim()) window.location.href = `/u/${username.trim()}`;
+  };
+  if (typeof document === 'undefined') return null;
+  return createPortal(
+    <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
+      <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+        <h3 style={{ marginBottom: 16, fontSize: 18 }}>Search User</h3>
+        <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 16 }}>Enter a User ID to view their public profile.</p>
+        <input autoFocus value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGo()} placeholder="User ID..." style={{ width: '100%', padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', marginBottom: 16, outline: 'none' }} />
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+          <button onClick={onClose} className="btn btn-ghost">Cancel</button>
+          <button onClick={handleGo} className="btn btn-primary" disabled={!username.trim()}>Search</button>
+        </div>
+      </div>
+    </div>, document.body
+  );
+}
+
+function ProfileDropdown({ user, logout, onOpenSettings, onOpenSearch }) {
   const [open, setOpen] = useState(false);
   const dropRef = useRef();
 
@@ -71,7 +94,7 @@ function ProfileDropdown({ user, logout, onOpenSettings }) {
             </div>
           </div>
 
-          <button onClick={() => { setOpen(false); window.open(`/u/${user.username}`, '_blank'); }}
+          <button onClick={() => { setOpen(false); onOpenSearch(); }}
             style={{
               width: '100%', background: 'none', border: 'none', textAlign: 'left',
               borderRadius: 6, color: 'var(--text)', padding: '10px 12px', fontSize: 13,
@@ -79,7 +102,7 @@ function ProfileDropdown({ user, logout, onOpenSettings }) {
             }}
             onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
             onMouseLeave={e => e.currentTarget.style.background = 'none'}>
-            Public Profile
+            Search User
           </button>
 
           <button onClick={() => { setOpen(false); onOpenSettings(); }}
@@ -112,6 +135,7 @@ function ProfileDropdown({ user, logout, onOpenSettings }) {
 export default function Navbar({ page, setPage }) {
   const [open, setOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const { user, setUser, logout } = useAuth();
 
   return (
@@ -145,7 +169,7 @@ export default function Navbar({ page, setPage }) {
 
         {user && (
           <div style={{ marginLeft: 'auto', flexShrink: 0 }} className="hide-mobile">
-            <ProfileDropdown user={user} logout={logout} onOpenSettings={() => setSettingsOpen(true)} />
+            <ProfileDropdown user={user} logout={logout} onOpenSettings={() => setSettingsOpen(true)} onOpenSearch={() => setSearchOpen(true)} />
           </div>
         )}
 
@@ -179,10 +203,10 @@ export default function Navbar({ page, setPage }) {
               }
               <span style={{ color: 'var(--text)', fontSize: 14, flex: 1 }}>{user.displayName}</span>
               <div style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
-                <button onClick={() => { setOpen(false); window.open(`/u/${user.username}`, '_blank'); }}
+                <button onClick={() => { setOpen(false); setSearchOpen(true); }}
                   style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
                     color: 'var(--text2)', padding: '6px 12px', fontSize: 13, cursor: 'pointer', marginBottom: 8, textAlign: 'left' }}>
-                  Public Profile
+                  Search User
                 </button>
                 <button onClick={() => { setOpen(false); setSettingsOpen(true); }}
                   style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6,
@@ -201,6 +225,7 @@ export default function Navbar({ page, setPage }) {
       )}
 
       {settingsOpen && <SettingsModal user={user} setUser={setUser} logout={logout} onClose={() => setSettingsOpen(false)} />}
+      {searchOpen && <SearchUserModal onClose={() => setSearchOpen(false)} />}
 
       <style>{`
         @media (max-width: 768px) {

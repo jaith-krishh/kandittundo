@@ -36,7 +36,7 @@ export default function PublicProfilePage({ username }) {
     );
   }
 
-  const { profile, stats, topMovies, recentMovies } = data;
+  const { profile, stats, topMovies } = data;
 
   const renderMovieGrid = (movies, isRanked = false) => (
     <div style={{
@@ -102,23 +102,20 @@ export default function PublicProfilePage({ username }) {
             <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
               <span style={{ color: 'var(--accent)' }}>{stats.totalWatched}</span> Watched
             </div>
+            {stats.topGenre && (
+              <div style={{ background: 'var(--bg3)', padding: '6px 12px', borderRadius: 20, fontSize: 13, fontWeight: 600 }}>
+                Top Genre: <span style={{ color: 'var(--gold)' }}>{stats.topGenre}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Top Movies */}
-      {topMovies.length > 0 && (
+      {topMovies && topMovies.length > 0 && (
         <div style={{ marginTop: 48 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>Top Ranked</h2>
+          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>Top 10 Ranked</h2>
           {renderMovieGrid(topMovies, true)}
-        </div>
-      )}
-
-      {/* Recent Watches */}
-      {recentMovies.length > 0 && (
-        <div style={{ marginTop: 48 }}>
-          <h2 style={{ fontSize: 22, fontWeight: 700, margin: 0, borderBottom: '1px solid var(--border)', paddingBottom: 12 }}>Recently Watched</h2>
-          {renderMovieGrid(recentMovies)}
         </div>
       )}
 
