@@ -121,7 +121,6 @@ export default function PublicProfileModal({ username, onClose }) {
 
           {data.isPrivate ? (
             <div style={{ marginTop: 48, textAlign: 'center', color: 'var(--text2)', padding: '40px 0' }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>🔒</div>
               <h2 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>This account is private</h2>
               <p>Only the owner can see their movie list and stats.</p>
             </div>
