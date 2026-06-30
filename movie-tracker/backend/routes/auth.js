@@ -7,16 +7,23 @@ const router = express.Router();
 const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 // GET /api/auth/google — kick off OAuth
-router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
+router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'], state: true }));
 
 // GET /api/auth/google/callback
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/` }),
   (req, res) => {
-    if (!req.user.profileComplete) {
-      return res.redirect(`${FRONTEND_URL}/?setup=1`);
-    }
-    res.redirect(FRONTEND_URL);
+    // Regenerate session to prevent session fixation
+    const tempPassport = req.session.passport;
+    req.session.regenerate((err) => {
+      if (err) return res.status(500).json({ error: 'Failed to regenerate session' });
+      req.session.passport = tempPassport;
+      
+      if (!req.user.profileComplete) {
+        return res.redirect(`${FRONTEND_URL}/?setup=1`);
+      }
+      res.redirect(FRONTEND_URL);
+    });
   }
 );
 
@@ -53,7 +60,8 @@ router.post('/setup', async (req, res) => {
     );
     res.json({ _id: user._id, username: user.username, displayName: user.displayName, avatar: user.avatar, profileComplete: user.profileComplete });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('setup error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -69,7 +77,8 @@ router.post('/profile', async (req, res) => {
     );
     res.json({ _id: user._id, username: user.username, displayName: user.displayName, avatar: user.avatar });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('profile update error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
@@ -85,10 +94,14 @@ router.delete('/account', async (req, res) => {
     await Movie.deleteMany({ userId: req.user._id });
     await User.findByIdAndDelete(req.user._id);
     req.logout(() => {
-      res.json({ message: 'Account deleted successfully' });
+      req.session.destroy(() => {
+        res.clearCookie('connect.sid');
+        res.json({ message: 'Account deleted successfully' });
+      });
     });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('account delete error:', err);
+    res.status(500).json({ error: 'Internal server error' });
   }
 });
 
