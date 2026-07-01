@@ -81,17 +81,13 @@ router.get('/', async (req, res) => {
 // Add movie
 router.post('/', async (req, res) => {
   try {
-    // Fix race condition: use atomic findOneAndUpdate with upsert
-    const movie = await Movie.findOneAndUpdate(
-      { userId: req.user._id, movie_id: req.body.movie_id },
-      { $setOnInsert: { ...req.body, userId: req.user._id, cached_at: new Date() } },
-      { upsert: true, new: true, rawResult: true }
-    );
-    if (!movie.lastErrorObject.updatedExisting) {
-      res.status(201).json(movie.value);
-    } else {
-      res.status(409).json({ error: 'Movie already in your list' });
+    const existing = await Movie.findOne({ userId: req.user._id, movie_id: req.body.movie_id });
+    if (existing) {
+      return res.status(409).json({ error: 'Movie already in your list' });
     }
+    
+    const movie = await Movie.create({ ...req.body, userId: req.user._id, cached_at: new Date() });
+    res.status(201).json(movie);
   } catch (err) {
     console.error('add movie error:', err);
     res.status(500).json({ error: 'Internal server error' });
