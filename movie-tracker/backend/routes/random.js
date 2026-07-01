@@ -8,12 +8,21 @@ const API_KEY = process.env.TMDB_API_KEY;
 const posterUrl = (p) => p ? `https://image.tmdb.org/t/p/w500${p}` : null;
 
 // Genre ID map for discover (movies)
-const GENRE_IDS = {
+const MOVIE_GENRE_IDS = {
   'Action': 28, 'Adventure': 12, 'Animation': 16, 'Comedy': 35,
   'Crime': 80, 'Documentary': 99, 'Drama': 18, 'Family': 10751,
   'Fantasy': 14, 'History': 36, 'Horror': 27, 'Music': 10402,
   'Mystery': 9648, 'Romance': 10749, 'Sci-Fi': 878, 'Thriller': 53,
   'War': 10752, 'Western': 37
+};
+
+// Genre ID map for discover (tv shows)
+const TV_GENRE_IDS = {
+  'Action': 10759, 'Adventure': 10759, 'Animation': 16, 'Comedy': 35,
+  'Crime': 80, 'Documentary': 99, 'Drama': 18, 'Family': 10751,
+  'Fantasy': 10765, 'History': null, 'Horror': null, 'Music': null,
+  'Mystery': 9648, 'Romance': null, 'Sci-Fi': 10765, 'Thriller': null,
+  'War': 10768, 'Western': 37
 };
 
 /**
@@ -23,7 +32,8 @@ const GENRE_IDS = {
 router.get('/', async (req, res) => {
   const { genres, language, minRating, maxRating, mediaType = 'movie' } = req.query;
 
-  const type = mediaType === 'tv' ? 'tv' : 'movie';
+  const isTV = mediaType === 'tv';
+  const type = isTV ? 'tv' : 'movie';
 
   const params = {
     api_key: API_KEY,
@@ -37,8 +47,9 @@ router.get('/', async (req, res) => {
   if (maxRating) params['vote_average.lte'] = Number(maxRating);
 
   if (genres) {
+    const map = isTV ? TV_GENRE_IDS : MOVIE_GENRE_IDS;
     const ids = genres.split(',')
-      .map(g => GENRE_IDS[g.trim()])
+      .map(g => map[g.trim()])
       .filter(Boolean)
       .join(',');
     if (ids) params.with_genres = ids;
@@ -67,7 +78,6 @@ router.get('/', async (req, res) => {
     }
 
     const pick = pool[Math.floor(Math.random() * pool.length)];
-    const isTV = type === 'tv';
 
     res.json({
       movie_id: pick.id,
