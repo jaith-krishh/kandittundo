@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useMovies } from '../context/MovieContext';
-import { addMovie, getTVDetails } from '../api';
+import { getDetails, errorMessage } from '../api';
+import { sameTitle } from '../lib/media';
 
 export default function SearchPreviewModal({ movie, onClose, onAdded }) {
-  const { movies, allMovies, addToWatchlist } = useMovies();
+  const { allMovies, addEntry, addToWatchlist, markWatched } = useMovies();
   const [mode, setMode] = useState(null);
   const [rating, setRating] = useState('');
   const [remarks, setRemarks] = useState('');
@@ -15,14 +16,16 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
   const [totalSeasons, setTotalSeasons] = useState(null);
   const [seasonRatings, setSeasonRatings] = useState([]);
 
-  const existing = allMovies.find(m => m.movie_id === movie.movie_id);
+  const existing = allMovies.find(m => sameTitle(m, movie));
   const alreadyWatched = existing?.status === 'watched';
   const alreadyWatchlist = existing?.status === 'watchlist';
+
+  const [seasonsUnavailable, setSeasonsUnavailable] = useState(false);
 
   // Fetch season count when entering watched mode for TV
   useEffect(() => {
     if (mode === 'watched' && isTV && !totalSeasons) {
-      getTVDetails(movie.movie_id).then(d => {
+      getDetails(movie.movie_id, 'tv').then(d => {
         if (d.total_seasons) {
           setTotalSeasons(d.total_seasons);
           setSeasonRatings(
@@ -30,10 +33,15 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
               season: i + 1, rating: '', remarks: ''
             }))
           );
+        } else {
+          setSeasonsUnavailable(true);
         }
-      }).catch(() => {});
+      }).catch(() => setSeasonsUnavailable(true));
     }
   }, [mode]);
+
+  const ratingError = (val) => val !== '' && val != null && !(Number(val) >= 0 && Number(val) <= 10)
+    ? 'Ratings must be between 0 and 10' : '';
 
   const updateSeasonRating = (idx, field, val) =>
     setSeasonRatings(prev => prev.map((s, i) => i === idx ? { ...s, [field]: val } : s));
@@ -45,20 +53,21 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
       onAdded();
       onClose();
     } catch (e) {
-      setError(e.response?.data?.error || 'Already in your list');
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
   };
 
   const handleWatched = async () => {
+    const invalid = ratingError(rating) || seasonRatings.map(s => ratingError(s.rating)).find(Boolean);
+    if (invalid) return setError(invalid);
+    setError('');
     setLoading(true);
     try {
       const payload = {
-        ...movie, status: 'watched',
-        rating: rating ? Number(rating) : null,
-        remarks, rewatch_value: rewatch || null,
-        date_watched: new Date().toISOString()
+        rating: rating !== '' ? Number(rating) : null,
+        remarks, rewatch_value: rewatch || null
       };
 
       if (isTV && seasonRatings.length) {
@@ -66,16 +75,22 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
           .filter(s => s.rating !== '' && s.rating != null)
           .map(s => ({ season: s.season, rating: Number(s.rating), remarks: s.remarks || '' }));
         payload.season_ratings = cleaned;
-        if (!payload.rating && cleaned.length) {
+        if (payload.rating == null && cleaned.length) {
           payload.rating = Math.round(cleaned.reduce((s, r) => s + r.rating, 0) / cleaned.length * 10) / 10;
         }
+        if (totalSeasons) payload.total_seasons = totalSeasons;
       }
 
-      await addMovie(payload);
+      // Already on the watchlist → move that entry to watched instead of adding a duplicate
+      if (existing) {
+        await markWatched(existing._id, payload);
+      } else {
+        await addEntry({ ...movie, ...payload, status: 'watched', date_watched: new Date().toISOString() });
+      }
       onAdded();
       onClose();
     } catch (e) {
-      setError(e.response?.data?.error || 'Already in your list');
+      setError(errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -127,7 +142,7 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
 
             {movie.tmdb_rating && (
               <div style={{ fontSize: 13, color: 'var(--gold)', marginBottom: 8, fontWeight: 600 }}>
-                IMDb {movie.tmdb_rating} / 10
+                TMDB {movie.tmdb_rating} / 10
               </div>
             )}
 
@@ -207,7 +222,7 @@ export default function SearchPreviewModal({ movie, onClose, onAdded }) {
                     </div>
                   </div>
                 )}
-                {isTV && mode === 'watched' && !seasonRatings.length && (
+                {isTV && mode === 'watched' && !seasonRatings.length && !seasonsUnavailable && (
                   <div style={{ fontSize: 12, color: 'var(--text2)' }}>Loading seasons...</div>
                 )}
 

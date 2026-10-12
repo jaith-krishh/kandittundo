@@ -174,28 +174,34 @@ export default function SearchBar() {
   const [preview, setPreview] = useState(null);
   const { fetchMovies } = useMovies();
   const timer = useRef(null);
+  const latestSearch = useRef(0);
   const ref = useRef(null);
 
   useEffect(() => {
     clearTimeout(timer.current);
+    // Any response still in flight is now for an outdated query
+    const searchId = ++latestSearch.current;
     setError('');
-    if (query.length < 3) { setResults([]); setOpen(false); return; }
+    setLoading(false);
+    const q = query.trim();
+    if (q.length < 3) { setResults([]); setOpen(false); return; }
 
-    const cacheKey = lang ? `${query}::${lang}` : query;
+    const cacheKey = lang ? `${q}::${lang}` : q;
     const cached = getCached(cacheKey);
     if (cached) { setResults(cached); setOpen(true); return; }
 
     timer.current = setTimeout(async () => {
       setLoading(true);
       try {
-        const data = await searchTMDB(query, lang);
+        const data = await searchTMDB(q, lang);
         setCached(cacheKey, data);
+        if (searchId !== latestSearch.current) return;
         setResults(data);
         setOpen(true);
       } catch {
-        setError('Search failed. Check your connection.');
+        if (searchId === latestSearch.current) setError('Search failed. Check your connection.');
       } finally {
-        setLoading(false);
+        if (searchId === latestSearch.current) setLoading(false);
       }
     }, 400);
 
@@ -309,16 +315,13 @@ export default function SearchBar() {
                   }}>
                     {m.media_type === 'tv' ? 'TV' : 'FILM'}
                   </span>
-                  {m.providers?.length > 0 && (
-                    <span style={{ fontSize: 10, color: 'var(--green)' }}>{m.providers.join(', ')}</span>
-                  )}
                 </div>
               </div>
             ))}
           </div>
         )}
 
-        {open && !loading && results.length === 0 && query.length >= 3 && (
+        {open && !loading && results.length === 0 && query.trim().length >= 3 && (
           <div style={{
             position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0,
             background: 'var(--bg2)', border: '1px solid var(--border)',

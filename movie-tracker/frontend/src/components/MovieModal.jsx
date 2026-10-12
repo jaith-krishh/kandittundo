@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useMovies } from '../context/MovieContext';
-import { getTrailer, getProviders } from '../api';
-import axios from 'axios';
+import { getTrailer, getProviders, getDetails, errorMessage } from '../api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const isValidRating = (val) => val === '' || val == null || (Number(val) >= 0 && Number(val) <= 10);
 
 export default function MovieModal({ movie, onClose }) {
   const { markWatched, editMovie, removeMovie } = useMovies();
@@ -17,6 +16,8 @@ export default function MovieModal({ movie, onClose }) {
   const [overview, setOverview] = useState(movie.overview || '');
   const [tmdbRating, setTmdbRating] = useState(movie.tmdb_rating || null);
   const [providers, setProviders] = useState([]);
+  const [saveError, setSaveError] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const isTV = movie.media_type === 'tv';
   const [totalSeasons, setTotalSeasons] = useState(movie.total_seasons || null);
@@ -46,12 +47,12 @@ export default function MovieModal({ movie, onClose }) {
     getProviders(movie.movie_id, type).then(data => setProviders(data)).catch(() => {});
 
     if (movie.movie_id) {
-      axios.get(`${API_URL}/tmdb/details/${type}/${movie.movie_id}`)
-        .then(r => {
-          if (r.data.overview) setOverview(r.data.overview);
-          if (r.data.tmdb_rating) setTmdbRating(r.data.tmdb_rating);
-          if (r.data.total_seasons && isTV) {
-            const ts = r.data.total_seasons;
+      getDetails(movie.movie_id, type)
+        .then(d => {
+          if (d.overview) setOverview(d.overview);
+          if (d.tmdb_rating) setTmdbRating(d.tmdb_rating);
+          if (d.total_seasons && isTV) {
+            const ts = d.total_seasons;
             setTotalSeasons(ts);
             // Always rebuild rows from TMDB total, merging saved season_ratings
             setSeasonRows(Array.from({ length: ts }, (_, i) => {
@@ -74,6 +75,7 @@ export default function MovieModal({ movie, onClose }) {
   };
 
   const goBack = () => {
+    setSaveError('');
     setTransitioning(true);
     setTimeout(() => { setView('info'); setEditing(false); setTransitioning(false); }, 200);
   };
@@ -106,8 +108,25 @@ export default function MovieModal({ movie, onClose }) {
     return payload;
   };
 
+  // Runs a save, validating ratings first and showing any server error instead of failing silently
+  const save = async (action) => {
+    if (!isValidRating(rating) || seasonRows.some(s => s.watched && !isValidRating(s.rating))) {
+      return setSaveError('Ratings must be between 0 and 10');
+    }
+    setSaveError('');
+    setSaving(true);
+    try {
+      await action();
+      onClose();
+    } catch (err) {
+      setSaveError(errorMessage(err, 'Could not save. Please try again.'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // For multi-season TV on watchlist: save progress without moving to watched
-  const handleSaveProgress = async () => {
+  const handleSaveProgress = () => save(async () => {
     const cleaned = seasonRows
       .filter(s => s.watched && s.rating !== '' && s.rating != null)
       .map(s => ({ season: s.season, rating: Number(s.rating), remarks: s.remarks || '' }));
@@ -116,24 +135,19 @@ export default function MovieModal({ movie, onClose }) {
       total_seasons: totalSeasons || seasonRows.length,
       watch_status: 'ongoing'
     });
-    onClose();
-  };
+  });
 
   // Completed all seasons → move to watched
-  const handleCompleted = async () => {
-    await markWatched(movie._id, buildPayload('completed'));
-    onClose();
-  };
+  const handleCompleted = () => save(() => markWatched(movie._id, buildPayload('completed')));
 
   // Dropped mid-way → move to watched with drop status
-  const handleDropped = async () => {
+  const handleDropped = () => {
     if (!confirm('Mark as dropped? This will move it to your Watched list.')) return;
-    await markWatched(movie._id, buildPayload('dropped'));
-    onClose();
+    save(() => markWatched(movie._id, buildPayload('dropped')));
   };
 
   // Non-TV or single-season save
-  const handleSave = async () => {
+  const handleSave = () => save(async () => {
     const payload = {
       rating: rating !== '' ? Number(rating) : null,
       remarks,
@@ -144,29 +158,37 @@ export default function MovieModal({ movie, onClose }) {
     } else {
       await editMovie(movie._id, payload);
     }
-    onClose();
-  };
+  });
 
   // Edit save for multi-season watched show
-  const handleEditSave = async () => {
+  const handleEditSave = () => save(async () => {
     const cleaned = seasonRows
       .filter(s => s.watched && s.rating !== '' && s.rating != null)
       .map(s => ({ season: s.season, rating: Number(s.rating), remarks: s.remarks || '' }));
-    let overallRating = rating !== '' ? Number(rating) : null;
-    if (!overallRating && cleaned.length) {
+    let overallRating = rating !== '' && rating != null ? Number(rating) : null;
+    if (overallRating == null && cleaned.length) {
       overallRating = Math.round(cleaned.reduce((s, r) => s + r.rating, 0) / cleaned.length * 10) / 10;
     }
     await editMovie(movie._id, {
       rating: overallRating, remarks, rewatch_value: rewatch || null,
-      season_ratings: cleaned, total_seasons: totalSeasons || seasonRows.length,
+      ...(isTV && { season_ratings: cleaned, total_seasons: totalSeasons || seasonRows.length }),
       watch_status: movie.watch_status
     });
-    onClose();
-  };
+  });
 
   const handleDelete = async () => {
-    if (confirm('Remove this?')) { await removeMovie(movie._id); onClose(); }
+    if (!confirm('Remove this?')) return;
+    try {
+      await removeMovie(movie._id);
+      onClose();
+    } catch (err) {
+      alert(errorMessage(err, 'Could not remove. Please try again.'));
+    }
   };
+
+  const errorLine = saveError && (
+    <div style={{ color: 'var(--accent)', fontSize: 12 }}>{saveError}</div>
+  );
 
   const fadeStyle = { transition: 'opacity 0.2s ease', opacity: transitioning ? 0 : 1 };
 
@@ -230,17 +252,18 @@ export default function MovieModal({ movie, onClose }) {
         Overall rating auto-calculated from rated seasons.
       </div>
 
+      {errorLine}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
         {/* Save progress — stays in watchlist */}
-        <button onClick={handleSaveProgress} className="btn btn-ghost btn-sm">
+        <button onClick={handleSaveProgress} disabled={saving} className="btn btn-ghost btn-sm">
           Save Progress
         </button>
         {/* Completed all seasons */}
-        <button onClick={handleCompleted} className="btn btn-primary btn-sm">
+        <button onClick={handleCompleted} disabled={saving} className="btn btn-primary btn-sm">
           Completed
         </button>
         {/* Dropped */}
-        <button onClick={handleDropped} className="btn btn-ghost btn-sm"
+        <button onClick={handleDropped} disabled={saving} className="btn btn-ghost btn-sm"
           style={{ color: 'var(--accent)', borderColor: 'var(--accent)', marginLeft: 'auto' }}>
           End Watch
         </button>
@@ -277,8 +300,11 @@ export default function MovieModal({ movie, onClose }) {
           <option>Yes</option><option>Maybe</option><option>No</option>
         </select>
       </label>
+      {errorLine}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={editing ? handleEditSave : handleSave} className="btn btn-primary">Save</button>
+        <button onClick={editing ? handleEditSave : handleSave} disabled={saving} className="btn btn-primary">
+          {saving ? 'Saving...' : 'Save'}
+        </button>
         <button onClick={goBack} className="btn btn-ghost">Back</button>
       </div>
     </div>
@@ -344,8 +370,11 @@ export default function MovieModal({ movie, onClose }) {
           <option>Yes</option><option>Maybe</option><option>No</option>
         </select>
       </label>
+      {errorLine}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button onClick={handleEditSave} className="btn btn-primary">Save</button>
+        <button onClick={handleEditSave} disabled={saving} className="btn btn-primary">
+          {saving ? 'Saving...' : 'Save'}
+        </button>
         <button onClick={goBack} className="btn btn-ghost">Back</button>
       </div>
     </div>
@@ -390,7 +419,7 @@ export default function MovieModal({ movie, onClose }) {
             </div>
             {tmdbRating && (
               <div style={{ fontSize: 13, color: 'var(--gold)', fontWeight: 600, marginBottom: 8 }}>
-                IMDb {tmdbRating} / 10
+                TMDB {tmdbRating} / 10
               </div>
             )}
 

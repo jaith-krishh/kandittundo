@@ -18,7 +18,7 @@ export default function DashboardPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
         {[
           { label: 'Total Watched', value: stats.total },
-          { label: 'Avg Rating', value: stats.avgRating },
+          { label: 'Avg Rating', value: stats.avgRating ?? 'N/A' },
           { label: 'Top Genre', value: stats.topGenres[0]?.[0] || 'N/A' }
         ].map(s => (
           <div key={s.label} style={{

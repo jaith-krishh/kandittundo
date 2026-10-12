@@ -15,8 +15,14 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = async () => {
-    await logoutUser();
-    setUser(null);
+    try {
+      await logoutUser();
+    } catch (err) {
+      console.error('Logout request failed', err);
+    } finally {
+      // Always leave the signed-in UI, even if the server call failed (e.g. after account deletion)
+      setUser(null);
+    }
   };
 
   return (

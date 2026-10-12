@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { updateProfile, deleteAccount } from '../api';
+import { updateProfile, deleteAccount, errorMessage } from '../api';
+import { resizeImage } from '../lib/resizeImage';
 
 export default function SettingsModal({ user, setUser, logout, onClose }) {
   const [tab, setTab] = useState('settings');
@@ -13,50 +14,62 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
   const [isPrivate, setIsPrivate] = useState(user.isPrivate || false);
   const [savingPrivacy, setSavingPrivacy] = useState(false);
   const [copySuccess, setCopySuccess] = useState('');
+  const [error, setError] = useState('');
   
   const fileRef = useRef();
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
+    e.target.value = ''; // allow picking the same file again
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      setSavingAvatar(true);
-      try {
-        const updated = await updateProfile({ avatar: ev.target.result });
-        setUser(prev => ({ ...prev, avatar: updated.avatar }));
-      } finally {
-        setSavingAvatar(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    setError('');
+    setSavingAvatar(true);
+    try {
+      const avatar = await resizeImage(file);
+      const updated = await updateProfile({ avatar });
+      setUser(prev => ({ ...prev, avatar: updated.avatar }));
+    } catch (err) {
+      setError(err.response ? errorMessage(err) : err.message);
+    } finally {
+      setSavingAvatar(false);
+    }
   };
 
   const handleSaveName = async () => {
     if (!editName.trim() || editName.trim() === user.displayName) return;
+    setError('');
     setSavingName(true);
     try {
       const updated = await updateProfile({ displayName: editName.trim() });
       setUser(prev => ({ ...prev, displayName: updated.displayName }));
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setSavingName(false);
     }
   };
 
   const handleTogglePrivacy = async () => {
+    setError('');
     setSavingPrivacy(true);
     try {
       const updated = await updateProfile({ isPrivate: !isPrivate });
       setIsPrivate(updated.isPrivate);
       setUser(prev => ({ ...prev, isPrivate: updated.isPrivate }));
+    } catch (err) {
+      setError(errorMessage(err));
     } finally {
       setSavingPrivacy(false);
     }
   };
 
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(user.username);
-    setCopySuccess('Copied!');
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(user.username);
+      setCopySuccess('Copied!');
+    } catch {
+      setCopySuccess('Copy failed');
+    }
     setTimeout(() => setCopySuccess(''), 2000);
   };
 
@@ -66,8 +79,8 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
     try {
       await deleteAccount();
       logout();
-    } catch (e) {
-      console.error(e);
+    } catch (err) {
+      setError(errorMessage(err, 'Could not delete your account. Please try again.'));
       setDeleting(false);
     }
   };
@@ -149,7 +162,13 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
         <div className="settings-content" style={{ flex: 1, overflowY: 'auto' }}>
           {tab === 'settings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 40, maxWidth: 500 }}>
-              
+              {error && (
+                <div style={{ background: 'rgba(229,9,20,0.08)', border: '1px solid rgba(229,9,20,0.3)',
+                  borderRadius: 8, padding: '10px 14px', color: 'var(--accent)', fontSize: 14, marginBottom: -24 }}>
+                  {error}
+                </div>
+              )}
+
               {/* Profile Photo */}
               <div>
                 <div style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', marginBottom: 16 }}>Profile Picture</div>
@@ -212,11 +231,11 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
                   {/* Copy User ID */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     <div>
-                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Your User ID</div>
-                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>Share this ID so others can search for your profile.</div>
+                      <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Your Username</div>
+                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>@{user.username} — share it so others can find your profile.</div>
                     </div>
                     <button onClick={handleCopyId} className="btn btn-ghost" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 90, justifyContent: 'center' }}>
-                      {copySuccess ? copySuccess : 'Copy ID'}
+                      {copySuccess ? copySuccess : 'Copy'}
                     </button>
                   </div>
 
@@ -224,7 +243,7 @@ export default function SettingsModal({ user, setUser, logout, onClose }) {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg2)', padding: '16px', borderRadius: 12, border: '1px solid var(--border)' }}>
                     <div>
                       <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>Private Profile</div>
-                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>When enabled, your profile will be hidden from other users.</div>
+                      <div style={{ fontSize: 13, color: 'var(--text2)' }}>When enabled, others only see your username — not your name, photo, stats or ratings.</div>
                     </div>
                     <button onClick={handleTogglePrivacy} disabled={savingPrivacy}
                       style={{

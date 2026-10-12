@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { setupProfile, checkUsername } from '../api';
+import { resizeImage } from '../lib/resizeImage';
 import { useAuth } from '../context/AuthContext';
 import VantaBackground from '../components/VantaBackground';
 
@@ -30,27 +31,37 @@ export default function ProfileSetupPage() {
   const [saving, setSaving] = useState(false);
   const fileRef = useRef();
   const checkTimer = useRef();
+  const latestUsername = useRef('');
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
+    e.target.value = ''; // allow picking the same file again
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setAvatar(ev.target.result);
-      setAvatarPreview(ev.target.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      const resized = await resizeImage(file);
+      setAvatar(resized);
+      setAvatarPreview(resized);
+      setError('');
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleUsernameChange = useCallback((val) => {
+    latestUsername.current = val;
     setUsername(val);
     clearTimeout(checkTimer.current);
     if (!val) { setUsernameStatus(null); return; }
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(val)) { setUsernameStatus('invalid'); return; }
     setUsernameStatus('checking');
     checkTimer.current = setTimeout(async () => {
-      const { available } = await checkUsername(val);
-      setUsernameStatus(available ? 'available' : 'taken');
+      try {
+        const { available } = await checkUsername(val);
+        // Ignore answers for a value the user has already changed
+        if (latestUsername.current === val) setUsernameStatus(available ? 'available' : 'taken');
+      } catch {
+        if (latestUsername.current === val) setUsernameStatus('error');
+      }
     }, 500);
   }, []);
 
@@ -70,8 +81,8 @@ export default function ProfileSetupPage() {
     }
   };
 
-  const statusColor = { available: '#4caf50', taken: 'var(--accent)', invalid: '#ff9800', checking: 'var(--text2)' };
-  const statusMsg = { available: 'Username available', taken: 'Username taken', invalid: '3-20 chars, letters/numbers/underscore only', checking: 'Checking...' };
+  const statusColor = { available: '#4caf50', taken: 'var(--accent)', invalid: '#ff9800', checking: 'var(--text2)', error: '#ff9800' };
+  const statusMsg = { available: 'Username available', taken: 'Username taken', invalid: '3-20 chars, letters/numbers/underscore only', checking: 'Checking...', error: "Couldn't check availability. Try again." };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

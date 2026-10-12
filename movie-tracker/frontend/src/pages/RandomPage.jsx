@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { getRandomMovie, addMovie } from '../api';
+import { getRandomMovie, errorMessage } from '../api';
 import { useMovies } from '../context/MovieContext';
+import { sameTitle } from '../lib/media';
 
 const GENRES = [
   'Action','Adventure','Animation','Comedy','Crime','Documentary',
@@ -24,7 +25,7 @@ const LANGUAGES = [
 ];
 
 export default function RandomPage() {
-  const { allMovies, addToWatchlist } = useMovies();
+  const { allMovies, addEntry, addToWatchlist } = useMovies();
 
   // Filters
   const [selectedGenres, setSelectedGenres] = useState([]);
@@ -56,29 +57,22 @@ export default function RandomPage() {
       const data = await getRandomMovie(params);
       setResult(data);
     } catch (e) {
-      setError(e.response?.data?.error || 'Something went wrong. Try again.');
+      setError(errorMessage(e, 'Something went wrong. Try again.'));
     } finally {
       setLoading(false);
     }
   };
 
-  const existing = result ? allMovies.find(m => m.movie_id === result.movie_id) : null;
+  const existing = result ? allMovies.find(m => sameTitle(m, result)) : null;
 
-  const handleAddWatchlist = async () => {
+  const handleAdd = async (status) => {
+    setError('');
     try {
-      await addToWatchlist(result);
-      setAddStatus('watchlist');
-    } catch {
-      setAddStatus('watchlist'); // already there
-    }
-  };
-
-  const handleAddWatched = async () => {
-    try {
-      await addMovie({ ...result, status: 'watched', date_watched: new Date().toISOString() });
-      setAddStatus('watched');
-    } catch {
-      setAddStatus('watched');
+      if (status === 'watchlist') await addToWatchlist(result);
+      else await addEntry({ ...result, status: 'watched', date_watched: new Date().toISOString() });
+      setAddStatus(status);
+    } catch (e) {
+      setError(errorMessage(e, 'Could not add it. Please try again.'));
     }
   };
 
@@ -248,7 +242,7 @@ export default function RandomPage() {
                 <span style={{ color: 'var(--text2)', fontSize: 13 }}>{result.release_year}</span>
                 {result.tmdb_rating && (
                   <span style={{ color: 'var(--gold)', fontWeight: 600, fontSize: 13 }}>
-                    ★ {result.tmdb_rating}
+                    TMDB ★ {result.tmdb_rating}
                   </span>
                 )}
                 {result.original_language && (
@@ -294,10 +288,10 @@ export default function RandomPage() {
                   </span>
                 ) : (
                   <>
-                    <button onClick={handleAddWatchlist} className="btn btn-ghost btn-sm">
+                    <button onClick={() => handleAdd('watchlist')} className="btn btn-ghost btn-sm">
                       + Watchlist
                     </button>
-                    <button onClick={handleAddWatched} className="btn btn-primary btn-sm">
+                    <button onClick={() => handleAdd('watched')} className="btn btn-primary btn-sm">
                       Mark Watched
                     </button>
                   </>
