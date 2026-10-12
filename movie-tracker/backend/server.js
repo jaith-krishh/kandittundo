@@ -152,7 +152,11 @@ initGenreCache();
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("MongoDB connected");
-    await runMigrations();
+    try {
+      await runMigrations();
+    } catch (err) {
+      console.error("Startup migration failed:", err);
+    }
   })
   .catch(err => console.error("MongoDB error:", err));
 
