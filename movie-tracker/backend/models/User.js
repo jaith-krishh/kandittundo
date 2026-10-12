@@ -4,7 +4,7 @@ const UserSchema = new mongoose.Schema({
   googleId: { type: String, required: true, unique: true },
   email: { type: String, required: true },
   username: { type: String, unique: true, sparse: true }, // set during profile setup
-  displayName: { type: String, default: '' },
+  displayName: { type: String, default: '', maxlength: 40 },
   avatar: { type: String, default: null }, // base64 string
   profileComplete: { type: Boolean, default: false },
   isPrivate: { type: Boolean, default: false },

@@ -1,10 +1,33 @@
 const express = require('express');
 const Movie = require('../models/Movie');
 const requireAuth = require('../middleware/auth');
+const { str, sendError } = require('../lib/http');
 const router = express.Router();
 
 // All movie routes require auth
 router.use(requireAuth);
+
+// Fields a client may set. Everything else (userId, _id, dates added, rank...) is server-controlled.
+const CREATE_FIELDS = ['movie_id', 'media_type', 'title', 'original_language', 'poster_url', 'genres',
+  'release_year', 'status', 'rating', 'remarks', 'rewatch_value', 'date_watched', 'overview',
+  'tmdb_rating', 'season_ratings', 'total_seasons', 'watch_status'];
+const UPDATE_FIELDS = ['rating', 'remarks', 'rewatch_value', 'status',
+  'date_watched', 'season_ratings', 'watch_status', 'total_seasons'];
+const MAX_BULK = 100;
+
+function pick(body, fields) {
+  const out = {};
+  for (const key of fields) {
+    if (body && body[key] !== undefined) out[key] = body[key];
+  }
+  return out;
+}
+
+function buildNew(body, userId) {
+  const doc = pick(body, CREATE_FIELDS);
+  doc.media_type = doc.media_type === 'tv' ? 'tv' : 'movie';
+  return { ...doc, userId, cached_at: new Date() };
+}
 
 // Stats must be defined BEFORE /:id to avoid route conflict
 router.get('/stats/summary', async (req, res) => {
@@ -12,9 +35,11 @@ router.get('/stats/summary', async (req, res) => {
     const uid = req.user._id;
     const watched = await Movie.find({ userId: uid, status: 'watched' }, 'rating genres date_watched poster_url title');
     const total = watched.length;
-    const avgRating = total
-      ? (watched.reduce((s, m) => s + (m.rating || 0), 0) / total).toFixed(1)
-      : 0;
+    // Average only over titles that actually have a rating
+    const rated = watched.filter(m => m.rating != null);
+    const avgRating = rated.length
+      ? (rated.reduce((s, m) => s + m.rating, 0) / rated.length).toFixed(1)
+      : null;
 
     const genreCount = {};
     watched.forEach(m => m.genres.forEach(g => { genreCount[g] = (genreCount[g] || 0) + 1; }));
@@ -27,92 +52,89 @@ router.get('/stats/summary', async (req, res) => {
 
     res.json({ total, avgRating, topGenres, recent });
   } catch (err) {
-    console.error('stats error:', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Bulk rank update
-router.put('/rank/bulk', async (req, res) => {
-  try {
-    const { rankings } = req.body;
-    if (!Array.isArray(rankings) || rankings.length === 0) {
-      return res.status(400).json({ error: 'Invalid rankings payload' });
-    }
-    await Promise.all(rankings.map(r => Movie.findOneAndUpdate(
-      { _id: r._id, userId: req.user._id },
-      { rank: r.rank }
-    )));
-    res.json({ message: 'Rankings updated' });
-  } catch (err) {
-    console.error('rank error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendError(res, err, 'stats');
   }
 });
 
 // Get all movies with filters
 router.get('/', async (req, res) => {
   try {
-    const { status, genre, minRating, maxRating, sortBy, sortOrder, rewatch } = req.query;
+    const { genre, sortBy, sortOrder } = req.query;
+    const status = str(req.query.status);
+    const rewatch = str(req.query.rewatch);
+    const minRating = Number(str(req.query.minRating) || NaN);
+    const maxRating = Number(str(req.query.maxRating) || NaN);
+
     const filter = { userId: req.user._id };
     if (status) filter.status = status;
-    if (genre) filter.genres = { $in: Array.isArray(genre) ? genre : [genre] };
-    if (minRating || maxRating) {
+    const genres = (Array.isArray(genre) ? genre : [genre]).filter(g => typeof g === 'string' && g);
+    if (genres.length) filter.genres = { $in: genres };
+    if (Number.isFinite(minRating) || Number.isFinite(maxRating)) {
       filter.rating = {};
-      if (minRating) filter.rating.$gte = Number(minRating);
-      if (maxRating) filter.rating.$lte = Number(maxRating);
+      if (Number.isFinite(minRating)) filter.rating.$gte = minRating;
+      if (Number.isFinite(maxRating)) filter.rating.$lte = maxRating;
     }
     if (rewatch) filter.rewatch_value = rewatch;
 
     const sortOptions = {};
     if (sortBy === 'rating') sortOptions.rating = sortOrder === 'asc' ? 1 : -1;
     else if (sortBy === 'date_watched') sortOptions.date_watched = sortOrder === 'asc' ? 1 : -1;
-    else if (sortBy === 'rank') sortOptions.rank = 1;
     else sortOptions.date_added = -1;
 
     const movies = await Movie.find(filter).sort(sortOptions);
     res.json(movies);
   } catch (err) {
-    console.error('get movies error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendError(res, err, 'get movies');
+  }
+});
+
+// Add many movies at once (CSV import). Skips ones already in the list.
+router.post('/bulk', async (req, res) => {
+  try {
+    const { movies } = req.body;
+    if (!Array.isArray(movies) || movies.length === 0 || movies.length > MAX_BULK) {
+      return res.status(400).json({ error: `Send between 1 and ${MAX_BULK} movies` });
+    }
+    let added = 0, duplicates = 0, failed = 0;
+    for (const body of movies) {
+      try {
+        await Movie.create(buildNew(body, req.user._id));
+        added++;
+      } catch (err) {
+        if (err.code === 11000) duplicates++;
+        else failed++;
+      }
+    }
+    res.json({ added, duplicates, failed });
+  } catch (err) {
+    sendError(res, err, 'bulk add');
   }
 });
 
 // Add movie
 router.post('/', async (req, res) => {
   try {
-    const existing = await Movie.findOne({ userId: req.user._id, movie_id: req.body.movie_id });
-    if (existing) {
-      return res.status(409).json({ error: 'Movie already in your list' });
-    }
-    
-    const movie = await Movie.create({ ...req.body, userId: req.user._id, cached_at: new Date() });
+    const movie = await Movie.create(buildNew(req.body, req.user._id));
     res.status(201).json(movie);
   } catch (err) {
-    console.error('add movie error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    // The unique index catches duplicates, including two requests racing each other
+    if (err.code === 11000) return res.status(409).json({ error: 'Already in your list' });
+    sendError(res, err, 'add movie');
   }
 });
 
 // Update movie
 router.put('/:id', async (req, res) => {
   try {
-    const ALLOWED_FIELDS = ['rating', 'remarks', 'rewatch_value', 'status',
-      'date_watched', 'rank', 'season_ratings', 'watch_status', 'total_seasons'];
-    const update = {};
-    for (const key of ALLOWED_FIELDS) {
-      if (req.body[key] !== undefined) update[key] = req.body[key];
-    }
     const movie = await Movie.findOneAndUpdate(
       { _id: req.params.id, userId: req.user._id },
-      update,
-      { new: true }
+      pick(req.body, UPDATE_FIELDS),
+      { new: true, runValidators: true }
     );
     if (!movie) return res.status(404).json({ error: 'Movie not found' });
     res.json(movie);
   } catch (err) {
-    console.error('update movie error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendError(res, err, 'update movie');
   }
 });
 
@@ -122,8 +144,7 @@ router.delete('/:id', async (req, res) => {
     await Movie.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
     res.json({ message: 'Deleted' });
   } catch (err) {
-    console.error('delete movie error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendError(res, err, 'delete movie');
   }
 });
 

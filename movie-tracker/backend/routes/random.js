@@ -1,11 +1,12 @@
 const express = require('express');
 const axios = require('axios');
-const { resolveGenres } = require('../lib/genreCache');
+const requireAuth = require('../middleware/auth');
+const { str } = require('../lib/http');
+const { TMDB_BASE, toEntry } = require('../lib/tmdb');
 
 const router = express.Router();
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+router.use(requireAuth);
 const API_KEY = process.env.TMDB_API_KEY;
-const posterUrl = (p) => p ? `https://image.tmdb.org/t/p/w500${p}` : null;
 
 // Genre ID map for discover (movies)
 const MOVIE_GENRE_IDS = {
@@ -16,7 +17,7 @@ const MOVIE_GENRE_IDS = {
   'War': 10752, 'Western': 37
 };
 
-// Genre ID map for discover (tv shows)
+// Genre ID map for discover (tv shows). TMDB has no TV genre for the ones mapped to null.
 const TV_GENRE_IDS = {
   'Action': 10759, 'Adventure': 10759, 'Animation': 16, 'Comedy': 35,
   'Crime': 80, 'Documentary': 99, 'Drama': 18, 'Family': 10751,
@@ -25,15 +26,22 @@ const TV_GENRE_IDS = {
   'War': 10768, 'Western': 37
 };
 
+const toNumber = (v) => {
+  const n = Number(str(v) || NaN);
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), 10) : null;
+};
+
 /**
  * GET /api/random?genres=Action,Comedy&language=en&minRating=6&maxRating=10&mediaType=movie
  * Returns a single random movie/show matching the filters
  */
 router.get('/', async (req, res) => {
-  const { genres, language, minRating, maxRating, mediaType = 'movie' } = req.query;
-
-  const isTV = mediaType === 'tv';
+  const isTV = str(req.query.mediaType) === 'tv';
   const type = isTV ? 'tv' : 'movie';
+  const noun = isTV ? 'shows' : 'movies';
+  const language = str(req.query.language);
+  const minRating = toNumber(req.query.minRating);
+  const maxRating = toNumber(req.query.maxRating);
 
   const params = {
     api_key: API_KEY,
@@ -42,17 +50,19 @@ router.get('/', async (req, res) => {
     page: 1
   };
 
-  if (language) params.with_original_language = language;
-  if (minRating) params['vote_average.gte'] = Number(minRating);
-  if (maxRating) params['vote_average.lte'] = Number(maxRating);
+  if (/^[a-z]{2}$/.test(language)) params.with_original_language = language;
+  if (minRating != null) params['vote_average.gte'] = minRating;
+  if (maxRating != null) params['vote_average.lte'] = maxRating;
 
-  if (genres) {
+  const genres = str(req.query.genres).split(',').map(g => g.trim()).filter(Boolean);
+  if (genres.length) {
     const map = isTV ? TV_GENRE_IDS : MOVIE_GENRE_IDS;
-    const ids = genres.split(',')
-      .map(g => map[g.trim()])
-      .filter(Boolean)
-      .join(',');
-    if (ids) params.with_genres = ids;
+    const unsupported = genres.filter(g => !map[g]);
+    if (unsupported.length) {
+      return res.status(400).json({ error: `TMDB has no ${isTV ? 'TV ' : ''}genre for: ${unsupported.join(', ')}` });
+    }
+    // Comma = TMDB "AND": results must match every selected genre
+    params.with_genres = [...new Set(genres.map(g => map[g]))].join(',');
   }
 
   try {
@@ -62,7 +72,7 @@ router.get('/', async (req, res) => {
     });
 
     if (!first.results?.length) {
-      return res.status(404).json({ error: 'No movies found with these filters. Try broadening your search.' });
+      return res.status(404).json({ error: `No ${noun} found with these filters. Try broadening your search.` });
     }
 
     // Pick a random page (capped at 10 to stay relevant)
@@ -74,28 +84,18 @@ router.get('/', async (req, res) => {
       const { data: pageData } = await axios.get(`${TMDB_BASE}/discover/${type}`, {
         params: { ...params, page: randomPage }, timeout: 8000
       });
-      pool = pageData.results;
+      if (pageData.results?.length) pool = pageData.results;
     }
 
     const pick = pool[Math.floor(Math.random() * pool.length)];
 
     res.json({
-      movie_id: pick.id,
-      media_type: type,
-      title: isTV ? (pick.name || pick.original_name) : pick.title,
-      original_language: pick.original_language || null,
-      poster_url: posterUrl(pick.poster_path),
-      backdrop_url: pick.backdrop_path ? `https://image.tmdb.org/t/p/w1280${pick.backdrop_path}` : null,
-      genres: resolveGenres(pick.genre_ids || []),
-      release_year: isTV
-        ? (pick.first_air_date ? pick.first_air_date.split('-')[0] : 'N/A')
-        : (pick.release_date ? pick.release_date.split('-')[0] : 'N/A'),
-      overview: pick.overview || '',
-      tmdb_rating: pick.vote_average ? Math.round(pick.vote_average * 10) / 10 : null,
+      ...toEntry(pick, type),
+      backdrop_url: pick.backdrop_path ? `https://image.tmdb.org/t/p/w1280${pick.backdrop_path}` : null
     });
   } catch (err) {
     console.error('Random route error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch random movie.' });
+    res.status(500).json({ error: 'Failed to fetch a random pick.' });
   }
 });
 
