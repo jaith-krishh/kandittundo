@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import { getMovies, addMovie, updateMovie, deleteMovie, bulkRank } from '../api';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { getMovies, addMovie, updateMovie, deleteMovie } from '../api';
 
 const MovieContext = createContext();
 
@@ -7,30 +7,41 @@ export function MovieProvider({ children }) {
   const [movies, setMovies] = useState([]);
   const [allMovies, setAllMovies] = useState([]);
   const [loading, setLoading] = useState(false);
+  // Pages refetch on every visit; ignore responses from a page the user already left
+  const latestFetch = useRef(0);
 
   const refreshAll = useCallback(async () => {
-    const data = await getMovies({});
-    setAllMovies(data);
+    try {
+      setAllMovies(await getMovies({}));
+    } catch (err) {
+      console.error('Could not load your list', err);
+    }
   }, []);
 
   useEffect(() => { refreshAll(); }, [refreshAll]);
 
   const fetchMovies = useCallback(async (params = {}) => {
+    const id = ++latestFetch.current;
     setLoading(true);
     try {
       const data = await getMovies(params);
-      setMovies(data);
+      if (id === latestFetch.current) setMovies(data);
+    } catch (err) {
+      console.error('Could not load movies', err);
     } finally {
-      setLoading(false);
+      if (id === latestFetch.current) setLoading(false);
     }
   }, []);
 
-  const addToWatchlist = async (movieData) => {
-    const movie = await addMovie({ ...movieData, status: 'watchlist' });
+  // Every add goes through here so both lists (and "already added" badges) stay in sync
+  const addEntry = async (movieData) => {
+    const movie = await addMovie(movieData);
     setMovies(prev => [movie, ...prev]);
     setAllMovies(prev => [movie, ...prev]);
     return movie;
   };
+
+  const addToWatchlist = (movieData) => addEntry({ ...movieData, status: 'watchlist' });
 
   const markWatched = async (id, { rating, remarks, rewatch_value, season_ratings, total_seasons, watch_status }) => {
     const movie = await updateMovie(id, {
@@ -58,18 +69,10 @@ export function MovieProvider({ children }) {
     setAllMovies(prev => prev.filter(m => m._id !== id));
   };
 
-  const updateRankings = async (rankings) => {
-    await bulkRank(rankings);
-    setMovies(prev => prev.map(m => {
-      const r = rankings.find(r => r._id === m._id);
-      return r ? { ...m, rank: r.rank } : m;
-    }));
-  };
-
   return (
     <MovieContext.Provider value={{
-      movies, allMovies, loading, fetchMovies,
-      addToWatchlist, markWatched, editMovie, removeMovie, updateRankings
+      movies, allMovies, loading, fetchMovies, refreshAll,
+      addEntry, addToWatchlist, markWatched, editMovie, removeMovie
     }}>
       {children}
     </MovieContext.Provider>

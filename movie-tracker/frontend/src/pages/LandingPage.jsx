@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import VantaBackground from '../components/VantaBackground';
-
-const API_URL = import.meta.env.VITE_API_URL || '/api';
+import { GOOGLE_LOGIN_URL } from '../api';
 
 const FEATURES = [
   {
@@ -169,7 +168,7 @@ export default function LandingPage() {
           </p>
 
           <a
-            href={`${API_URL}/auth/google`}
+            href={GOOGLE_LOGIN_URL}
             role="button"
             className="cta-btn"
             style={{
@@ -245,7 +244,7 @@ export default function LandingPage() {
             Ready to start tracking?
           </p>
           <a
-            href={`${API_URL}/auth/google`}
+            href={GOOGLE_LOGIN_URL}
             role="button"
             className="cta-btn"
             style={{
@@ -285,6 +284,10 @@ export default function LandingPage() {
           <button onClick={() => setActiveModal('contact')} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', padding: 0, font: 'inherit', textDecoration: 'none' }}>Contact Us</button>
         </div>
         <p>© {new Date().getFullYear()} kandittundo?. All rights reserved.</p>
+        <p style={{ fontSize: 11, textAlign: 'center' }}>
+          Movie and TV data from <a href="https://www.themoviedb.org" target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>TMDB</a>.
+          This product uses the TMDB API but is not endorsed or certified by TMDB.
+        </p>
       </footer>
 
       <style>{`
@@ -343,8 +346,9 @@ export default function LandingPage() {
                 <div style={{ color: 'var(--text2)', lineHeight: 1.6, fontSize: 14 }}>
                   <p><strong>1. Information Collection:</strong> We collect your email address and basic profile information when you sign in with Google. We also store your movie and TV show tracking data (watchlist, ratings, reviews, history).</p>
                   <p style={{ marginTop: 12 }}><strong>2. Use of Information:</strong> Your data is used solely to provide and improve the kandittundo? service. We do not sell your personal information to third parties.</p>
-                  <p style={{ marginTop: 12 }}><strong>3. Data Security:</strong> We implement reasonable security measures to protect your personal information.</p>
-                  <p style={{ marginTop: 12 }}><strong>4. Third-Party Services:</strong> We use Google for authentication. Their privacy policies also apply when you use their services to log in.</p>
+                  <p style={{ marginTop: 12 }}><strong>3. Public Profiles:</strong> Your username, display name, profile picture, number of titles watched, top genre and top-rated titles can be viewed by anyone who knows your username. Turn on Private Profile in Settings to hide everything except your username.</p>
+                  <p style={{ marginTop: 12 }}><strong>4. Data Security:</strong> We implement reasonable security measures to protect your personal information.</p>
+                  <p style={{ marginTop: 12 }}><strong>5. Third-Party Services:</strong> We use Google for authentication and TMDB for movie and TV information. Their privacy policies also apply when you use their services to log in.</p>
                 </div>
               </>
             )}

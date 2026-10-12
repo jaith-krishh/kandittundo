@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MovieProvider } from './context/MovieContext';
 import Navbar from './components/Navbar';
@@ -6,20 +6,37 @@ import SearchBar from './components/SearchBar';
 import WatchlistPage from './pages/WatchlistPage';
 import WatchedPage from './pages/WatchedPage';
 import RankingPage from './pages/RankingPage';
-import DashboardPage from './pages/DashboardPage';
 import TimelinePage from './pages/TimelinePage';
 import ImportPage from './pages/ImportPage';
 import RandomPage from './pages/RandomPage';
-import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
 import ProfileSetupPage from './pages/ProfileSetupPage';
 import LoadingScreen from './components/LoadingScreen';
 import VantaBackground from './components/VantaBackground';
 import PublicProfilePage from './pages/PublicProfilePage';
 
+// The chart library is large; only load it when the dashboard is opened
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+
+const PAGES = {
+  watchlist: WatchlistPage,
+  watched: WatchedPage,
+  ranking: RankingPage,
+  dashboard: DashboardPage,
+  timeline: TimelinePage,
+  import: ImportPage,
+  random: RandomPage
+};
+
+// Each page lives at its own path (/watched, /ranking, ...) so refresh and the back button work
+const pageFromPath = () => {
+  const name = window.location.pathname.slice(1);
+  return PAGES[name] ? name : 'watchlist';
+};
+
 function AppInner() {
   const { user, authLoading } = useAuth();
-  const [page, setPage] = useState('watchlist');
+  const [page, setPageState] = useState(pageFromPath);
   const [appReady, setAppReady] = useState(false);
 
   useEffect(() => {
@@ -35,14 +52,26 @@ function AppInner() {
     }
   }, []);
 
+  useEffect(() => {
+    const onPop = () => setPageState(pageFromPath());
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const setPage = (name) => {
+    if (name === page) return;
+    window.history.pushState({}, '', name === 'watchlist' ? '/' : `/${name}`);
+    setPageState(name);
+  };
+
   const path = window.location.pathname;
   if (path.startsWith('/u/')) {
-    const username = path.split('/')[2];
+    const username = decodeURIComponent(path.split('/')[2] || '');
     return (
-      <MovieProvider>
+      <>
         <VantaBackground />
         <PublicProfilePage username={username} />
-      </MovieProvider>
+      </>
     );
   }
 
@@ -52,15 +81,7 @@ function AppInner() {
 
   if (!user.profileComplete) return <ProfileSetupPage />;
 
-  const pages = {
-    watchlist: <WatchlistPage />,
-    watched: <WatchedPage />,
-    ranking: <RankingPage />,
-    dashboard: <DashboardPage />,
-    timeline: <TimelinePage />,
-    import: <ImportPage />,
-    random: <RandomPage />
-  };
+  const Page = PAGES[page];
 
   return (
     <MovieProvider>
@@ -68,7 +89,9 @@ function AppInner() {
       <Navbar page={page} setPage={setPage} />
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
       {page === 'watchlist' && <SearchBar />}
-        {pages[page]}
+        <Suspense fallback={<p style={{ color: 'var(--text2)' }}>Loading...</p>}>
+          <Page />
+        </Suspense>
       </main>
     </MovieProvider>
   );

@@ -1,6 +1,7 @@
 const express = require('express');
 const User = require('../models/User');
 const Movie = require('../models/Movie');
+const { sendError } = require('../lib/http');
 
 const router = express.Router();
 
@@ -8,34 +9,29 @@ const router = express.Router();
 router.get('/user/:username', async (req, res) => {
   try {
     const { username } = req.params;
-    
+
     // Validate username format to prevent Regex Injection / ReDoS
     if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
-    const user = await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
+
+    // Exact match first so older accounts that differ only by case still resolve predictably
+    const user = await User.findOne({ username })
+      || await User.findOne({ username: { $regex: new RegExp(`^${username}$`, 'i') } });
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    
+
+    // Private profiles reveal nothing beyond the username the visitor already typed
     if (user.isPrivate) {
-      return res.json({
-        profile: {
-          displayName: user.displayName,
-          username: user.username,
-          avatar: user.avatar,
-          joinedAt: user.createdAt
-        },
-        isPrivate: true
-      });
+      return res.json({ profile: { username: user.username }, isPrivate: true });
     }
 
     // Top rated movies
     const topMovies = await Movie.find({ userId: user._id, status: 'watched', rating: { $ne: null } })
       .sort({ rating: -1, date_watched: -1 })
       .limit(10)
-      .select('title poster_url rating rank movie_id media_type release_year');
+      .select('title poster_url rating movie_id media_type release_year');
 
     // Top genre
     const genreStats = await Movie.aggregate([
@@ -65,8 +61,7 @@ router.get('/user/:username', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('public profile error:', err);
-    res.status(500).json({ error: 'Internal server error' });
+    sendError(res, err, 'public profile');
   }
 });
 

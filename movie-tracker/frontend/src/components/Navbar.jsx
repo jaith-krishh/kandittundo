@@ -18,15 +18,15 @@ const NAV = [
 function SearchUserModal({ onClose, onSearch }) {
   const [username, setUsername] = useState('');
   const handleGo = () => {
-    if (username.trim()) onSearch(username.trim());
+    if (username.trim()) onSearch(username.trim().replace(/^@/, ''));
   };
   if (typeof document === 'undefined') return null;
   return createPortal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
       <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, width: '100%', maxWidth: 400 }} onClick={e => e.stopPropagation()}>
         <h3 style={{ marginBottom: 16, fontSize: 18 }}>Search User</h3>
-        <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 16 }}>Enter a User ID to view their public profile.</p>
-        <input autoFocus value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGo()} placeholder="User ID..." style={{ width: '100%', padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', marginBottom: 16, outline: 'none' }} />
+        <p style={{ color: 'var(--text2)', fontSize: 14, marginBottom: 16 }}>Enter a username to view their public profile.</p>
+        <input autoFocus value={username} onChange={e => setUsername(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleGo()} placeholder="Username..." style={{ width: '100%', padding: '12px 16px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', marginBottom: 16, outline: 'none' }} />
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
           <button onClick={onClose} className="btn btn-ghost">Cancel</button>
           <button onClick={handleGo} className="btn btn-primary" disabled={!username.trim()}>Search</button>

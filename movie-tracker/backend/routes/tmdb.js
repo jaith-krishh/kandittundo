@@ -1,21 +1,38 @@
 const express = require('express');
 const axios = require('axios');
-const { resolveGenres } = require('../lib/genreCache');
+const requireAuth = require('../middleware/auth');
+const { createCache } = require('../lib/cache');
+const { str } = require('../lib/http');
+const { TMDB_BASE, toEntry } = require('../lib/tmdb');
 
 const router = express.Router();
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+// Only signed-in users can spend the app's TMDB quota
+router.use(requireAuth);
 const API_KEY = process.env.TMDB_API_KEY;
 
-// Simple in-memory cache
-const cache = {};
+const DAY = 24 * 60 * 60 * 1000;
+// Separate caches so one endpoint's keys can never collide with another's
+const searchCache = createCache({ ttlMs: DAY, maxEntries: 2000 });
+const detailsCache = createCache({ ttlMs: 7 * DAY, maxEntries: 5000 });
+const trailerCache = createCache({ ttlMs: 7 * DAY, maxEntries: 5000 });
+const providersCache = createCache({ ttlMs: DAY, maxEntries: 5000 });
 
-const posterUrl = (path) => path ? `https://image.tmdb.org/t/p/w500${path}` : null;
+// :type/:id params are put into the TMDB URL, so only allow known values
+router.param('type', (req, res, next, type) => {
+  if (type !== 'movie' && type !== 'tv') return res.status(400).json({ error: 'Invalid type' });
+  next();
+});
+router.param('id', (req, res, next, id) => {
+  if (!/^\d{1,10}$/.test(id)) return res.status(400).json({ error: 'Invalid id' });
+  next();
+});
 
 // GET /api/tmdb/details/:type/:id — fetch overview + rating for existing movies
 router.get('/details/:type/:id', async (req, res) => {
   const { type, id } = req.params;
-  const key = `details:${type}:${id}`;
-  if (cache[key]) return res.json(cache[key]);
+  const key = `${type}:${id}`;
+  const cached = detailsCache.get(key);
+  if (cached) return res.json(cached);
   try {
     const { data } = await axios.get(`${TMDB_BASE}/${type}/${id}`, {
       params: { api_key: API_KEY }, timeout: 8000
@@ -25,7 +42,7 @@ router.get('/details/:type/:id', async (req, res) => {
       tmdb_rating: data.vote_average ? Math.round(data.vote_average * 10) / 10 : null,
       total_seasons: data.number_of_seasons || null
     };
-    cache[key] = result;
+    detailsCache.set(key, result);
     res.json(result);
   } catch {
     res.status(500).json({ error: 'Failed to fetch details' });
@@ -34,12 +51,14 @@ router.get('/details/:type/:id', async (req, res) => {
 
 // GET /api/tmdb/search?q=query&lang=ko
 router.get('/search', async (req, res) => {
-  const q = (req.query.q || '').trim();
-  const lang = (req.query.lang || '').trim();
+  const q = str(req.query.q).trim().slice(0, 100);
+  const langParam = str(req.query.lang).trim();
+  const lang = /^[a-z]{2}$/.test(langParam) ? langParam : '';
   if (q.length < 3) return res.json([]);
 
-  const cacheKey = lang ? `${q}::${lang}` : q;
-  if (cache[cacheKey]) return res.json(cache[cacheKey]);
+  const cacheKey = `${lang}::${q.toLowerCase()}`;
+  const cached = searchCache.get(cacheKey);
+  if (cached) return res.json(cached);
 
   try {
     const params = { api_key: API_KEY, query: q, page: 1 };
@@ -49,30 +68,14 @@ router.get('/search', async (req, res) => {
       params, timeout: 8000
     });
 
-    let results = data.results
+    const results = data.results
       .filter(m => m.media_type === 'movie' || m.media_type === 'tv')
       // If language filter set, enforce it (TMDB multi-search doesn't always respect with_original_language)
       .filter(m => !lang || m.original_language === lang)
       .slice(0, 10)
-      .map(m => {
-        const isTV = m.media_type === 'tv';
-        return {
-          movie_id: m.id,
-          media_type: m.media_type,
-          title: isTV ? (m.name || m.original_name) : m.title,
-          original_language: m.original_language || null,
-          poster_url: posterUrl(m.poster_path),
-          genres: resolveGenres(m.genre_ids || []),
-          release_year: isTV
-            ? (m.first_air_date ? m.first_air_date.split('-')[0] : 'N/A')
-            : (m.release_date ? m.release_date.split('-')[0] : 'N/A'),
-          overview: m.overview || '',
-          tmdb_rating: m.vote_average ? Math.round(m.vote_average * 10) / 10 : null,
-          providers: []
-        };
-      });
+      .map(m => toEntry(m, m.media_type));
 
-    cache[cacheKey] = results;
+    searchCache.set(cacheKey, results);
     res.json(results);
   } catch (err) {
     console.error('Search error:', err.message);
@@ -83,12 +86,17 @@ router.get('/search', async (req, res) => {
 // GET /api/tmdb/trailer/:type/:id
 router.get('/trailer/:type/:id', async (req, res) => {
   const { type, id } = req.params;
+  const key = `${type}:${id}`;
+  const cached = trailerCache.get(key);
+  if (cached) return res.json(cached);
   try {
     const { data } = await axios.get(`${TMDB_BASE}/${type}/${id}/videos`, {
       params: { api_key: API_KEY }, timeout: 8000
     });
     const trailer = data.results.find(v => v.type === 'Trailer' && v.site === 'YouTube');
-    res.json({ key: trailer ? trailer.key : null });
+    const result = { key: trailer ? trailer.key : null };
+    trailerCache.set(key, result);
+    res.json(result);
   } catch {
     res.status(500).json({ error: 'Failed to fetch trailer' });
   }
@@ -97,8 +105,9 @@ router.get('/trailer/:type/:id', async (req, res) => {
 // GET /api/tmdb/providers/:type/:id
 router.get('/providers/:type/:id', async (req, res) => {
   const { type, id } = req.params;
-  const key = `providers:${type}:${id}`;
-  if (cache[key]) return res.json(cache[key]);
+  const key = `${type}:${id}`;
+  const cached = providersCache.get(key);
+  if (cached) return res.json(cached);
   try {
     const { data } = await axios.get(`${TMDB_BASE}/${type}/${id}/watch/providers`, {
       params: { api_key: API_KEY }, timeout: 8000
@@ -107,15 +116,15 @@ router.get('/providers/:type/:id', async (req, res) => {
     // Default to IN, fallback to US
     const providersData = results.IN || results.US || null;
     const flatrate = providersData ? (providersData.flatrate || []) : [];
-    
+
     // Map to just id, name, logo
     const providers = flatrate.map(p => ({
       provider_id: p.provider_id,
       provider_name: p.provider_name,
       logo_path: p.logo_path ? `https://image.tmdb.org/t/p/w92${p.logo_path}` : null
     }));
-    
-    cache[key] = providers;
+
+    providersCache.set(key, providers);
     res.json(providers);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch providers' });

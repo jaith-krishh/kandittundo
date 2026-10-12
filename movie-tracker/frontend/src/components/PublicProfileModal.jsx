@@ -24,7 +24,7 @@ export default function PublicProfileModal({ username, onClose }) {
   if (loading) {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 999999, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={onClose}>
-        <span className="loader"></span>
+        <span className="spinner" aria-label="Loading"></span>
       </div>,
       document.body
     );
@@ -44,6 +44,8 @@ export default function PublicProfileModal({ username, onClose }) {
   }
 
   const { profile, stats, topMovies } = data;
+  // Private profiles only come back with a username
+  const name = profile.displayName || profile.username;
 
   const renderMovieGrid = (movies, isRanked = false) => (
     <div style={{
@@ -52,8 +54,8 @@ export default function PublicProfileModal({ username, onClose }) {
       gap: 16,
       marginTop: 16
     }}>
-      {movies.map(m => (
-        <div key={m.movie_id} style={{ position: 'relative' }}>
+      {movies.map((m, i) => (
+        <div key={`${m.media_type || 'movie'}-${m.movie_id}`} style={{ position: 'relative' }}>
           {isRanked && (
             <div style={{
               position: 'absolute', top: -8, left: -8, background: 'var(--gold)',
@@ -61,7 +63,7 @@ export default function PublicProfileModal({ username, onClose }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontWeight: 800, fontSize: 14, boxShadow: '0 4px 12px rgba(0,0,0,0.3)', zIndex: 2
             }}>
-              {m.rank}
+              {i + 1}
             </div>
           )}
           {m.poster_url ? (
@@ -75,7 +77,7 @@ export default function PublicProfileModal({ username, onClose }) {
             <div style={{ fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.title}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
               <span style={{ fontSize: 12, color: 'var(--text2)' }}>{m.release_year}</span>
-              {m.rating && <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>{m.rating}/10</span>}
+              {m.rating != null && <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>{m.rating}/10</span>}
             </div>
           </div>
         </div>
@@ -97,11 +99,11 @@ export default function PublicProfileModal({ username, onClose }) {
               <img src={profile.avatar} alt="Avatar" style={{ width: 100, height: 100, borderRadius: '50%', objectFit: 'cover' }} />
             ) : (
               <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--bg3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32, color: 'var(--text2)' }}>
-                {profile.displayName.charAt(0).toUpperCase()}
+                {name.charAt(0).toUpperCase()}
               </div>
             )}
             <div>
-              <h1 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 4px 0' }}>{profile.displayName}</h1>
+              <h1 style={{ fontSize: 32, fontWeight: 700, margin: '0 0 4px 0' }}>{name}</h1>
               <div style={{ color: 'var(--text2)', fontSize: 16 }}>@{profile.username}</div>
               
               {!data.isPrivate && (

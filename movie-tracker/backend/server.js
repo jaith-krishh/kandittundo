@@ -1,4 +1,13 @@
 require("dotenv").config();
+
+// Fail fast with a clear message instead of crashing later on the first request
+const REQUIRED_ENV = ["MONGO_URI", "SESSION_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "TMDB_API_KEY"];
+const missingEnv = REQUIRED_ENV.filter(k => !process.env[k]);
+if (missingEnv.length) {
+  console.error("Missing required environment variables: " + missingEnv.join(", "));
+  process.exit(1);
+}
+
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -8,10 +17,10 @@ const passport = require("passport");
 const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const User = require("./models/User");
 const { initGenreCache } = require("./lib/genreCache");
+const { runMigrations } = require("./lib/migrations");
 const path = require("path");
 const rateLimit = require("express-rate-limit");
 const mongoSanitize = require("express-mongo-sanitize");
-const xss = require("xss-clean");
 const hpp = require("hpp");
 const helmet = require("helmet");
 
@@ -29,14 +38,13 @@ app.use((req, res, next) => {
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      defaultSrc: ["'self'", "https://accounts.google.com"],
+      defaultSrc: ["'self'"],
       imgSrc: ["'self'", "https://image.tmdb.org", "data:", "https://lh3.googleusercontent.com"],
-      connectSrc: ["'self'", "https://api.themoviedb.org", "https://accounts.google.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com",
-        "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
+      connectSrc: ["'self'"],
+      scriptSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
-      frameSrc: ["'self'", "https://accounts.google.com"],
+      frameSrc: ["'none'"],
       frameAncestors: ["'none'"]
     }
   },
@@ -64,10 +72,13 @@ app.get("/api/health", (req, res) => res.status(200).send("OK"));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ limit: "1mb", extended: true }));
 
-// Malformed JSON handler
+// Malformed / oversized body handler
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     return res.status(400).json({ error: "Malformed JSON payload" });
+  }
+  if (err.type === "entity.too.large") {
+    return res.status(413).json({ error: "Request is too large" });
   }
   next(err);
 });
@@ -75,32 +86,18 @@ app.use((err, req, res, next) => {
 // Data Sanitization against NoSQL Query Injection
 app.use(mongoSanitize());
 
-// Data Sanitization against XSS (Cross-Site Scripting)
-app.use(xss());
+// Prevent HTTP Parameter Pollution ("genre" is a real multi-value filter)
+app.use(hpp({ whitelist: ["genre"] }));
 
-// Prevent HTTP Parameter Pollution
-app.use(hpp());
-
-// General API rate limiter
+// General API rate limiter (the stricter login limiter lives in routes/auth.js)
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
+  max: 1000, // limit each IP to 1000 requests per windowMs
   standardHeaders: true,
   legacyHeaders: false,
+  message: { error: "Too many requests, please slow down and try again in a few minutes" }
 });
-
-// Stricter login rate limiter
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // limit each IP to 5 requests per windowMs
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: { error: "Too many login attempts, please try again after 15 minutes" }
-});
-
-// Apply rate limiters
 app.use("/api", apiLimiter);
-app.use("/api/auth/google", loginLimiter);
 
 app.use(session({
   secret: process.env.SESSION_SECRET,
@@ -126,7 +123,7 @@ passport.use(new GoogleStrategy({
       user = await User.create({
         googleId: profile.id,
         email: profile.emails[0].value,
-        displayName: profile.displayName || ""
+        displayName: (profile.displayName || "").slice(0, 40)
       });
     }
     return done(null, user);
@@ -138,7 +135,8 @@ passport.use(new GoogleStrategy({
 passport.serializeUser((user, done) => done(null, user._id));
 passport.deserializeUser(async (id, done) => {
   try {
-    const user = await User.findById(id);
+    // The avatar can be large and is only needed by /api/auth/me, so skip it on every request
+    const user = await User.findById(id).select("-avatar");
     done(null, user);
   } catch (err) {
     done(err);
@@ -148,10 +146,17 @@ passport.deserializeUser(async (id, done) => {
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Independent of MongoDB: searches need genre names even if the DB is slow to connect
+initGenreCache();
+
 mongoose.connect(process.env.MONGO_URI)
   .then(async () => {
     console.log("MongoDB connected");
-    await initGenreCache();
+    try {
+      await runMigrations();
+    } catch (err) {
+      console.error("Startup migration failed:", err);
+    }
   })
   .catch(err => console.error("MongoDB error:", err));
 
@@ -161,6 +166,7 @@ app.use("/api/tmdb", require("./routes/tmdb"));
 app.use("/api/import", require("./routes/import"));
 app.use("/api/random", require("./routes/random"));
 app.use("/api/public", require("./routes/public"));
+app.use("/api", (req, res) => res.status(404).json({ error: "Not found" }));
 
 const frontendDist = path.join(__dirname, "../frontend/dist");
 app.use(express.static(frontendDist));
@@ -174,6 +180,11 @@ const PORT = process.env.PORT || 5000;
 app.use((err, req, res, next) => {
   console.error("Unhandled Error:", err);
   res.status(500).json({ error: "Internal Server Error" });
+});
+
+// Last-resort safety net: log a stray async error instead of taking the whole server down
+process.on("unhandledRejection", (err) => {
+  console.error("Unhandled promise rejection:", err);
 });
 
 app.listen(PORT, () => console.log("Server running on port " + PORT));

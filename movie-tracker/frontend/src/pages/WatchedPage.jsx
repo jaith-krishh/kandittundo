@@ -21,11 +21,13 @@ export default function WatchedPage() {
   const [mediaType, setMediaType] = useState('all');
 
   useEffect(() => {
-    fetchMovies({ status: 'watched', sortBy, sortOrder,
+    // Short delay so typing a rating doesn't send a request per keystroke
+    const timer = setTimeout(() => fetchMovies({ status: 'watched', sortBy, sortOrder,
       genre: genres.length ? genres : undefined,
       minRating: minRating || undefined, maxRating: maxRating || undefined,
       rewatch: rewatch || undefined
-    });
+    }), 300);
+    return () => clearTimeout(timer);
   }, [sortBy, sortOrder, genres, minRating, maxRating, rewatch]);
 
   const watched = movies.filter(m => m.status === 'watched')
@@ -36,10 +38,12 @@ export default function WatchedPage() {
 
   const exportCSV = () => {
     if (watched.length === 0) return;
-    const headers = ['Title', 'Media Type', 'Rating', 'Rank', 'Date Watched', 'Genres', 'Rewatch', 'Review'];
+    const headers = ['Title', 'Media Type', 'Rating', 'Date Watched', 'Genres', 'Rewatch', 'Review'];
     const escapeCSV = (str) => {
       if (str == null) return '';
-      const stringified = String(str);
+      let stringified = String(str);
+      // Stop spreadsheet apps from running text that starts like a formula
+      if (typeof str === 'string' && /^[=+\-@\t\r]/.test(stringified)) stringified = `'${stringified}`;
       if (stringified.includes(',') || stringified.includes('"') || stringified.includes('\n')) {
         return `"${stringified.replace(/"/g, '""')}"`;
       }
@@ -49,11 +53,10 @@ export default function WatchedPage() {
       escapeCSV(m.title),
       escapeCSV(m.media_type),
       escapeCSV(m.rating),
-      escapeCSV(m.rank),
       escapeCSV(m.date_watched ? new Date(m.date_watched).toLocaleDateString() : ''),
       escapeCSV((m.genres || []).join(', ')),
-      escapeCSV(m.rewatch),
-      escapeCSV(m.review)
+      escapeCSV(m.rewatch_value),
+      escapeCSV(m.remarks)
     ].join(','));
     const csvContent = [headers.join(','), ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -64,6 +67,7 @@ export default function WatchedPage() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -112,7 +116,6 @@ export default function WatchedPage() {
               borderRadius: 6, color: 'var(--text)', fontSize: 13 }}>
             <option value="date_watched">Date Watched</option>
             <option value="rating">Rating</option>
-            <option value="rank">Rank</option>
           </select>
           <select value={sortOrder} onChange={e => setSortOrder(e.target.value)}
             style={{ padding: '6px 10px', background: 'var(--bg2)', border: '1px solid var(--border)',
